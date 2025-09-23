@@ -79,14 +79,14 @@ export default function UserSigin() {
          <hr ></hr>
         <div class="mb-3">
             <label class="form-label">Name</label>
-            <input type="text" class="form-control" placeholder='Mahesh' onChange={update} name='name' required/>
+            <input type="text" class="form-control" placeholder='Ex: Mahesh' onChange={update} name='name' required/>
             
             
         </div>
 
         <div class="mb-3">
             <label class="form-label">Email</label>
-            <input type="email" class="form-control" placeholder='Mahesh@gmail.com' onChange={update} name='email' required/>
+            <input type="email" class="form-control" placeholder='Ex: Sample@gmail.com' onChange={update} name='email' required/>
             { errormsg.email ? <div style={{color:"red"}} class="form-text">*Enter a Valid Email.</div> : <div></div>}
 
         </div>
@@ -99,7 +99,7 @@ export default function UserSigin() {
 
         <div class="mb-3">
             <label class="form-label">Phone Number</label>
-            <input type="number" class="form-control" placeholder='123456789' onChange={update} name='phonenumber' required/>
+            <input type="number" class="form-control" placeholder='Ex: 6453231256' onChange={update} name='phonenumber' required/>
             { errormsg.phonenumber ? <div style={{color:"red"}} class="form-text">*PhoneNumber Contains 10 digits Only.</div> : <div></div>}
         </div>
 
@@ -110,13 +110,13 @@ export default function UserSigin() {
 
        <div class="mb-3">
             <label class="form-label">City</label>
-            <input type="text" class="form-control" placeholder='Delhi' onChange={update} name='city' required/>
+            <input type="text" class="form-control" placeholder='Ex: Madurai' onChange={update} name='city' required/>
             <div id="" class="form-text"></div>
         </div>
 
         <div class="mb-3">
             <label class="form-label">Pincode</label>
-            <input type="number" class="form-control" placeholder='625-532' onChange={update} name='pincode' required/>
+            <input type="number" class="form-control" placeholder='Ex: 625-532' onChange={update} name='pincode' required/>
             { errormsg.pincode ? <div style={{color:"red"}} class="form-text">*Enter a Valid Pincode.</div> : <div></div>}
         </div>
         

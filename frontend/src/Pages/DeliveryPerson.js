@@ -99,7 +99,7 @@ export default function DeliveryPerson() {
                   <hr></hr>
                   <div class="mb-3">
                       <label class="form-label">Email</label>
-                      <input type="email" class="form-control" placeholder='Mahesh@gmail.com' onChange={updatelogin} name='email' required/>
+                      <input type="email" class="form-control" placeholder='Ex: Sample@gmail.com' onChange={updatelogin} name='email' required/>
                      
                   </div>
           
@@ -200,12 +200,12 @@ export default function DeliveryPerson() {
 
             <div className="mb-3">
               <label className="form-label">Name</label>
-              <input type="text" className="form-control" placeholder="Mahesh" onChange={update} name="name" required />
+              <input type="text" className="form-control" placeholder="Ex: Mahesh" onChange={update} name="name" required />
             </div>
 
             <div className="mb-3">
               <label className="form-label">Email</label>
-              <input type="email" className="form-control" placeholder="Mahesh@gmail.com" onChange={update} name="email" required />
+              <input type="email" className="form-control" placeholder="Ex: Sample@gmail.com" onChange={update} name="email" required />
               {errormsg.email ? <div style={{ color: "red" }} className="form-text">*Enter a Valid Email.</div> : <div></div>}
             </div>
 
@@ -217,7 +217,7 @@ export default function DeliveryPerson() {
 
             <div className="mb-3">
               <label className="form-label">Phone Number</label>
-              <input type="number" className="form-control" placeholder="1234567890" onChange={update} name="phonenumber" required />
+              <input type="number" className="form-control" placeholder="Ex: 7865453476" onChange={update} name="phonenumber" required />
               {errormsg.phonenumber ? <div style={{ color: "red" }} className="form-text">*PhoneNumber Contains 10 digits Only.</div> : <div></div>}
             </div>
 

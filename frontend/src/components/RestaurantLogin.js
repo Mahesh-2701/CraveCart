@@ -41,7 +41,7 @@ export default function RestaurantLogin() {
         <hr></hr>
         <div class="mb-3">
             <label class="form-label">Email</label>
-            <input type="email" class="form-control" placeholder='Mahesh@gmail.com' onChange={update} name='email' required/>
+            <input type="email" class="form-control" placeholder='Ex: Sample@gmail.com' onChange={update} name='email' required/>
            
         </div>
 
