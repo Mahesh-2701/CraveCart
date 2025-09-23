@@ -7,7 +7,7 @@ const DeliveryNavbar = () => {
 
   return (
     <nav className="navbar navbar-expand-lg rounded-bottom-5 fixed-top bg-white shadow-sm px-3">
-      <div className="container-fluid">
+      <div className="container-fluid d-flex justify-content-between align-items-center">
         {/* Brand Logo */}
         <Link to="/" className="navbar-brand d-flex align-items-center">
           {/* Replace with Swiggy logo */}
@@ -34,6 +34,26 @@ const DeliveryNavbar = () => {
           <span className="fw-bold text-dark">CraveCart</span>
         </Link>
 
+        <ul class="navbar-nav ms-auto d-flex me-2 flex-row">
+            
+                    { !isAuth ? (
+                          
+                       <li className="nav-item">
+              <Link to="/delivery" className="btn btn-secondary rounded-pill px-3">
+                Log In
+              </Link>
+            </li>
+        
+                    ):(
+                     <li className="nav-item">
+              <Link to="/delivery/order" className="nav-link fw-semibold">
+                Orders
+              </Link>
+            </li>
+                    )}
+                    
+               </ul>
+
         {/* Toggler for mobile */}
         <button
           className="navbar-toggler"
@@ -59,21 +79,13 @@ const DeliveryNavbar = () => {
                 Sign In
               </Link>
             </li>
-             <li className="nav-item">
-              <Link to="/delivery" className="btn btn-secondary rounded-pill px-3">
-                Log In
-              </Link>
-            </li>
+             
             </>
 
             ) : (
 
             <>
-            <li className="nav-item">
-              <Link to="/delivery/order" className="nav-link fw-semibold">
-                Orders
-              </Link>
-            </li>
+            
             <li className="nav-item">
               <Link to="/delivery/view" className="nav-link fw-semibold">
                 Profile

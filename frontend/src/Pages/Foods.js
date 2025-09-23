@@ -42,7 +42,7 @@ export default function Foods() {
           <b>Whats on your Mind ?</b>
         </h2>
         <div className="my-3">
-          <form className="d-flex  my-2 my-lg-0 w-75">
+          <form className="d-flex  my-2 my-lg-0 w-100 w-md-75">
             <input
               className="form-control rounded-pill "
               type="search"

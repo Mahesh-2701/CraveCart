@@ -9,7 +9,7 @@ const Navbar = () => {
 
   return (
     <nav className="navbar navbar-expand-lg rounded-bottom-5 border sticky-top bg-white shadow-lg px-3">
-      <div className="container-fluid">
+      <div className="container-fluid d-flex justify-content-between align-items-center">
         {/* Brand Logo */}
         <Link to="/" className="navbar-brand d-flex align-items-center">
           {/* Replace with Swiggy logo */}
@@ -36,20 +36,7 @@ const Navbar = () => {
           <span className="fw-bold text-dark">CraveCart</span>
         </Link>
 
-        {/* Toggler for mobile */}
-        <button
-          className="navbar-toggler"
-          type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#navbarNav"
-          aria-controls="navbarNav"
-          aria-expanded="false"
-          aria-label="Toggle navigation"
-        >
-          <span className="navbar-toggler-icon"></span>
-        </button>
-
-        <ul class="navbar-nav ms-auto d-flex flex-row">
+        <ul class="navbar-nav ms-auto me-2 d-flex flex-row">
                   
         
                     { !isAuth ? (
@@ -63,7 +50,7 @@ const Navbar = () => {
                     ):(
                       <>
                       <li className="nav-item">
-                        <Link to="/foods" className="nav-link fw-semibold">
+                        <Link to="/foods" className="nav-link fw-semibold me-2">
                           Foods
                         </Link>
                       </li>
@@ -79,6 +66,21 @@ const Navbar = () => {
                     )}
                     
                </ul>
+
+        {/* Toggler for mobile */}
+        <button
+          className="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNav"
+          aria-controls="navbarNav"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span className="navbar-toggler-icon"></span>
+        </button>
+
+        
 
         {/* Navbar Links */}
         <div className="collapse navbar-collapse" id="navbarNav">
