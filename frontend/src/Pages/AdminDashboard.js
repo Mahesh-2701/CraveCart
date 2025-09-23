@@ -1,6 +1,6 @@
 import axios from "axios";
 import React, { useEffect, useState } from "react";
-import { toast } from "react-toastify";
+import { toast,ToastContainer } from "react-toastify";
 
 export default function AdminDashboard() {
   const [orders, setOrder] = useState([]);
