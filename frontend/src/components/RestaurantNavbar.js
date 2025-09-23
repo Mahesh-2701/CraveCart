@@ -34,7 +34,7 @@ const Navbar = () => {
           <span className="fw-bold text-dark">CraveCart</span>
         </Link>
 
-        <ul class="navbar-nav ms-auto  d-flex me-2 flex-row order-1 order-md-2">
+        <ul class="navbar-nav ms-auto  d-flex me-2 flex-row order-1 ">
     
             { !isAuth ? (
                   
@@ -56,7 +56,7 @@ const Navbar = () => {
 
         {/* Toggler for mobile */}
         <button
-          className="navbar-toggler order-2 order-md-1"
+          className="navbar-toggler order-2"
           type="button"
           data-bs-toggle="collapse"
           data-bs-target="#navbarNav"
