@@ -50,6 +50,9 @@ export default function DeliveryPersonView() {
          axios.put("https://cravecart-5vz7.onrender.com/delivery/update/"+deliverypersonid,delperson,{headers:{Authorization:"Bearer "+localStorage.getItem("token")}})
         .then((res)=>{
           toast.success(res.data.message);
+           localStorage.removeItem("id");
+          localStorage.removeItem("token");
+          localStorage.removeItem("role");
           setTimeout(()=>navigate("/delivery"),1500)
         })
         .catch((err)=>toast.error("Network Error "+err.message))
@@ -151,7 +154,10 @@ export default function DeliveryPersonView() {
     </div>
   </div>
 
-  <ToastContainer></ToastContainer>
+   <ToastContainer 
+    className="custom-toast"
+    autoClose={3000} 
+  />
 
   <Footer></Footer>
 
@@ -193,6 +199,32 @@ export default function DeliveryPersonView() {
       0% { opacity: 0; transform: translateY(20px); }
       100% { opacity: 1; transform: translateY(0); }
     }
+
+    .custom-toast {
+      top: 80px !important;
+      left: 75% !important;
+      right: auto !important;
+      width: 320px !important;
+    }
+
+    /* Tablet */
+    @media (max-width: 1024px) {
+      .custom-toast {
+        left: 65% !important;
+        width: 280px !important;
+      }
+    }
+
+    /* Mobile */
+    @media (max-width: 600px) {
+      .custom-toast {
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        width: 90% !important;
+        max-width: 300px !important;
+      }
+    }
+
   `}</style>
 </div>
 

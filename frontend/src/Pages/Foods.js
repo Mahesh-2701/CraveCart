@@ -69,7 +69,37 @@ export default function Foods() {
           })}
         </div>
       </section>
-      <ToastContainer style={{top:"80px",left:"75%",right:"auto"}} autoClose={3000}  />
+      <style>{`
+    .custom-toast {
+      top: 80px !important;
+      left: 75% !important;
+      right: auto !important;
+      width: 320px !important;
+    }
+
+    /* Tablet */
+    @media (max-width: 1024px) {
+      .custom-toast {
+        left: 65% !important;
+        width: 280px !important;
+      }
+    }
+
+    /* Mobile */
+    @media (max-width: 600px) {
+      .custom-toast {
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        width: 90% !important;
+        max-width: 300px !important;
+      }
+    }
+  `}</style>
+
+  <ToastContainer 
+    className="custom-toast"
+    autoClose={3000} 
+  />
       <Footer></Footer>
     </div>
   );

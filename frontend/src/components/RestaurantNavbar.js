@@ -46,6 +46,26 @@ const Navbar = () => {
         >
           <span className="navbar-toggler-icon"></span>
         </button>
+        <ul class="navbar-nav ms-auto d-flex flex-row">
+          
+
+            { !isAuth ? (
+                  
+                <li className="nav-item">
+              <Link to="/restaurant/view" className="btn btn-secondary rounded-pill px-3">
+                Log In
+              </Link>
+            </li>
+
+            ):(
+              <li className="nav-item">
+              <Link to="/restaurant/admin" className="nav-link fw-semibold">
+                Admin
+              </Link>
+            </li>
+            )}
+            
+       </ul>
 
         {/* Navbar Links */}
         <div className="collapse navbar-collapse mx-auto" id="navbarNav">
@@ -59,21 +79,13 @@ const Navbar = () => {
                 Sign In
               </Link>
             </li>
-             <li className="nav-item">
-              <Link to="/restaurant/view" className="btn btn-secondary rounded-pill px-3">
-                Log In
-              </Link>
-            </li>
+             
             </>
 
             ) : (
 
             <>
-            <li className="nav-item">
-              <Link to="/restaurant/admin" className="nav-link fw-semibold">
-                Admin
-              </Link>
-            </li>
+            
             <li className="nav-item">
               <Link to="/restaurant/admin/order" className="nav-link fw-semibold">
                 Orders

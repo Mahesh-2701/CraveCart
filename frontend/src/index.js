@@ -3,7 +3,6 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import {BrowserRouter as Router,Routes,Route} from 'react-router-dom'
-import { ToastContainer,toast } from 'react-toastify';
 import LoginPage from './Pages/LoginPage';
 import SigninPage from './Pages/SigninPage';
 import Restaraunts from './Pages/Restaraunts';
@@ -76,7 +75,6 @@ root.render(
     </Routes>
   </Router>
 
-  <ToastContainer style={{top:"80px",left:"75%",right:"auto"}} autoClose={3000}  />
   </>
 );
 

@@ -161,7 +161,10 @@ export default function RestaurantSignin() {
         </div>
       </div>
 
-      <ToastContainer style={{ top: "80px", left: "75%", right: "auto" }} />
+      <ToastContainer 
+    className="custom-toast"
+    autoClose={3000} 
+  />
 
       {/* Inline styles */}
       <style>{`
@@ -170,6 +173,31 @@ export default function RestaurantSignin() {
                       url("https://images.unsplash.com/photo-1600891964599-f61ba0e24092?auto=format&fit=crop&w=1600&q=80")
                       no-repeat center center/cover;
         }
+
+        .custom-toast {
+      top: 80px !important;
+      left: 75% !important;
+      right: auto !important;
+      width: 320px !important;
+    }
+
+    /* Tablet */
+    @media (max-width: 1024px) {
+      .custom-toast {
+        left: 65% !important;
+        width: 280px !important;
+      }
+    }
+
+    /* Mobile */
+    @media (max-width: 600px) {
+      .custom-toast {
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        width: 90% !important;
+        max-width: 300px !important;
+      }
+    }
       `}</style>
     </div>
   )

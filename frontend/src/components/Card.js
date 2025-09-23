@@ -34,12 +34,18 @@ export default function Card(props) {
         {/* 🔹 Dark overlay when restaurant = false */}
         {!restaurant && (
           <div
-            className="overlay position-absolute top-0 start-0 w-100 h-100"
+            className="overlay position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
             style={{
               backgroundColor: "rgba(0, 0, 0, 0.4)",
-              borderRadius: "0.5rem"
+              borderRadius: "0.5rem",
+              color: "white",
+              fontWeight: "bold",
+              fontSize: "1rem",
+              textAlign: "center"
             }}
-          ></div>
+          >
+            This item is not available for now
+          </div>
         )}
 
         <div className="card-body position-relative">
@@ -55,14 +61,42 @@ export default function Card(props) {
           <div className="d-flex justify-content-between align-items-center">
             <span className="fw-bold">₹ {price}</span>
             {restaurant ? (
-              <button className="btn btn-sm btn-success" onClick={addtocart}>Add +</button>
+              <button className="btn btn btn-success" onClick={addtocart}>Add +</button>
             ) : (
               <></>
             )}
           </div>
         </div>
       </div>
-      <ToastContainer style={{top:"80px",left:"75%",right:"auto"}} autoClose={3000} limit={3} />
+      <ToastContainer  className="custom-toast" autoClose={3000} limit={3}/>
+
+       <style>{`
+    .custom-toast {
+      top: 80px !important;
+      left: 75% !important;
+      right: auto !important;
+      width: 320px !important;
+    }
+
+    /* Tablet */
+    @media (max-width: 1024px) {
+      .custom-toast {
+        left: 65% !important;
+        width: 280px !important;
+      }
+    }
+
+    /* Mobile */
+    @media (max-width: 600px) {
+      .custom-toast {
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        width: 90% !important;
+        max-width: 300px !important;
+      }
+    }
+  `}</style>
+
     </div>
   )
 }

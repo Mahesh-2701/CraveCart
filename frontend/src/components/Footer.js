@@ -45,6 +45,7 @@ const Footer = () => {
                   src="https://cdn.worldvectorlogo.com/logos/google-play-3.svg"
                   alt="Google Play"
                   style={{ height: "50px" }}
+                  className="img-fluid"
                 />
               </Link>
               <Link to="#" className="d-inline-block" aria-label="Download on App Store">
@@ -52,6 +53,7 @@ const Footer = () => {
                   src="https://cdn.worldvectorlogo.com/logos/available-on-the-app-store.svg"
                   alt="App Store"
                   style={{ height: "50px" }}
+                  className="img-fluid"
                 />
               </Link>
             </div>

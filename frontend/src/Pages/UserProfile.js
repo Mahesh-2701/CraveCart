@@ -59,6 +59,9 @@ export default function UserProfile() {
          axios.put("https://cravecart-5vz7.onrender.com/user/update/"+userid,delperson,{headers:{Authorization:"Bearer "+localStorage.getItem("token")}})
         .then((res)=>{
           toast.success(res.data.message);
+          localStorage.removeItem("id");
+          localStorage.removeItem("token");
+          localStorage.removeItem("role");
           setTimeout(()=>navigate("/user/login"),1500)
         })
         .catch((err)=>toast.error(err.response.data.message))
@@ -245,10 +248,38 @@ export default function UserProfile() {
     from { opacity: 0; transform: translateY(-15px); }
     to { opacity: 1; transform: translateY(0); }
   }
+
+   .custom-toast {
+      top: 80px !important;
+      left: 75% !important;
+      right: auto !important;
+      width: 320px !important;
+    }
+
+    /* Tablet */
+    @media (max-width: 1024px) {
+      .custom-toast {
+        left: 65% !important;
+        width: 280px !important;
+      }
+    }
+
+    /* Mobile */
+    @media (max-width: 600px) {
+      .custom-toast {
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        width: 90% !important;
+        max-width: 300px !important;
+      }
+    }
 `}</style>
 
 
-      <ToastContainer></ToastContainer>
+      <ToastContainer 
+    className="custom-toast"
+    autoClose={3000} 
+  />
 
       <Footer></Footer>
     </div>

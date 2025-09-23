@@ -49,17 +49,44 @@ const Navbar = () => {
           <span className="navbar-toggler-icon"></span>
         </button>
 
+        <ul class="navbar-nav ms-auto d-flex flex-row">
+                  
+        
+                    { !isAuth ? (
+                          
+                        <li className="nav-item">
+                          <Link to="/user/login" className="btn btn-secondary rounded-pill px-3">
+                            Log In
+                          </Link>
+                        </li>
+        
+                    ):(
+                      <>
+                      <li className="nav-item">
+                        <Link to="/foods" className="nav-link fw-semibold">
+                          Foods
+                        </Link>
+                      </li>
+                       <li className="nav-item ">
+              <Link to="/user/cart" className="btn btn-outline-secondary rounded-pill px-3 fw-bold ">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-bag-fill" viewBox="0 0 16 16">
+                  <path d="M8 1a2.5 2.5 0 0 1 2.5 2.5V4h-5v-.5A2.5 2.5 0 0 1 8 1m3.5 3v-.5a3.5 3.5 0 1 0-7 0V4H1v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V4z"/>
+                </svg> Cart
+              </Link>
+            </li>
+            </>
+                      
+                    )}
+                    
+               </ul>
+
         {/* Navbar Links */}
         <div className="collapse navbar-collapse" id="navbarNav">
           
 
           {/* Right section: Links */}
           <ul className="navbar-nav ms-auto align-items-center gap-2">
-            <li className="nav-item">
-              <Link to="/foods" className="nav-link fw-semibold">
-                Foods
-              </Link>
-            </li>
+           
             <li className="nav-item">
               <Link to="/restaurants" className="nav-link fw-semibold">
                 Restaurants
@@ -74,11 +101,7 @@ const Navbar = () => {
                 Sign In
               </Link>
             </li>
-             <li className="nav-item">
-              <Link to="/user/login" className="btn btn-secondary rounded-pill px-3">
-                Log In
-              </Link>
-            </li>
+            
             </>
 
             ) : (
@@ -103,13 +126,7 @@ const Navbar = () => {
                 </ul>
                 </div>
             </li>
-            <li className="nav-item ">
-              <Link to="/user/cart" className="btn btn-outline-secondary rounded-pill px-3 fw-bold ">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-bag-fill" viewBox="0 0 16 16">
-                  <path d="M8 1a2.5 2.5 0 0 1 2.5 2.5V4h-5v-.5A2.5 2.5 0 0 1 8 1m3.5 3v-.5a3.5 3.5 0 1 0-7 0V4H1v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V4z"/>
-                </svg> Cart
-              </Link>
-            </li>
+           
 
             </>
 

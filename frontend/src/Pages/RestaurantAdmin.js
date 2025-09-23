@@ -166,7 +166,7 @@ export default function RestaurantAdmin() {
               </div>
               <div className="col-12 col-md-4 d-flex justify-content-center align-items-center">
                 <img
-                  src={"http://localhost:5000" + restaurant.image}
+                  src={"https://cravecart-5vz7.onrender.com" + restaurant.image}
                   className="img-fluid rounded-2 p-2 border-dark"
                   alt={restaurant.image}
                   width={"300px"}
@@ -282,7 +282,37 @@ export default function RestaurantAdmin() {
         </div>
       </section>
       <Footer></Footer>
-      <ToastContainer></ToastContainer>
+      <style>{`
+    .custom-toast {
+      top: 80px !important;
+      left: 75% !important;
+      right: auto !important;
+      width: 320px !important;
+    }
+
+    /* Tablet */
+    @media (max-width: 1024px) {
+      .custom-toast {
+        left: 65% !important;
+        width: 280px !important;
+      }
+    }
+
+    /* Mobile */
+    @media (max-width: 600px) {
+      .custom-toast {
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        width: 90% !important;
+        max-width: 300px !important;
+      }
+    }
+  `}</style>
+
+  <ToastContainer 
+    className="custom-toast"
+    autoClose={3000} 
+  />
     </div>
   );
 }

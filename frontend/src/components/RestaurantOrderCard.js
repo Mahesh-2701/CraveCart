@@ -9,7 +9,7 @@ export default function RestaurantOrderCard({index,order}) {
     const [status,setStatus]=useState(orderstatus)
 
      useEffect(() => {
-    setStatus(order.status); // sync when order prop changes
+    setStatus(order.status); 
   }, [order.status]);
 
     function changestatus(id,newstatus){
