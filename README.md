@@ -1,3 +1,5 @@
+Project Link : https://crave-cart-gamma.vercel.app/
+
 CraveCart – Food Delivery Platform
 
 CraveCart is a full-stack food delivery application built using the MERN stack (MongoDB, Express.js, React.js, Node.js) with real-time communication powered by Socket.IO.
