@@ -6,7 +6,7 @@ import { toast, ToastContainer } from "react-toastify";
 import RestaurantOrderCard from "../components/RestaurantOrderCard";
 import { io } from "socket.io-client";
 
-const socket = io("http://localhost:5000");
+const socket = io("https://cravecart-5vz7.onrender.com");
 
 export default function RestaurantOrder() {
   const [orders, setOrders] = useState([]);
@@ -14,7 +14,7 @@ export default function RestaurantOrder() {
   useEffect(() => {
     axios
       .get(
-        "http://localhost:5000/restaurant/order/" + localStorage.getItem("id"),
+        "https://cravecart-5vz7.onrender.com/restaurant/order/" + localStorage.getItem("id"),
         {
           headers: { Authorization: "Bearer " + localStorage.getItem("token") },
         }

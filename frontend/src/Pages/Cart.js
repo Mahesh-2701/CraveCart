@@ -11,7 +11,7 @@ export default function Cart() {
   useEffect(() => {
     axios
       .get(
-        "http://localhost:5000/user/cartdisplay/" + localStorage.getItem("id"),
+        "https://cravecart-5vz7.onrender.com/user/cartdisplay/" + localStorage.getItem("id"),
         {
           headers: { Authorization: "Bearer " + localStorage.getItem("token") },
         }
@@ -22,14 +22,14 @@ export default function Cart() {
 
   const removeitem = (id) => {
     axios
-      .delete("http://localhost:5000/user/cartdelete/" + id, {
+      .delete("https://cravecart-5vz7.onrender.com/user/cartdelete/" + id, {
         headers: { Authorization: "Bearer " + localStorage.getItem("token") },
       })
       .then((res) => {
         toast.success(res.data.message);
         axios
           .get(
-            "http://localhost:5000/user/cartdisplay/" +
+            "https://cravecart-5vz7.onrender.com/user/cartdisplay/" +
               localStorage.getItem("id"),
             {
               headers: {
@@ -80,7 +80,7 @@ const [address, setAddress] = useState("");
               address:address
         }
 
-        axios.post("http://localhost:5000/user/order/"+localStorage.getItem("id"),orderdetails,
+        axios.post("https://cravecart-5vz7.onrender.com/user/order/"+localStorage.getItem("id"),orderdetails,
                 {headers:{Authorization:"Bearer "+localStorage.getItem("token")}})
         .then((res)=>console.log(res.data.message))
         .catch((err)=>toast.error(err.response.data.message));
@@ -88,7 +88,7 @@ const [address, setAddress] = useState("");
       })
       toast.success("Thank you for the Order ! Your Order will recieve Soon ")
     
-      axios.delete("http://localhost:5000/user/cartrefresh/"+localStorage.getItem("id"), {headers:{Authorization:"Bearer "+localStorage.getItem("token")}})
+      axios.delete("https://cravecart-5vz7.onrender.com/user/cartrefresh/"+localStorage.getItem("id"), {headers:{Authorization:"Bearer "+localStorage.getItem("token")}})
       .then((res)=>toast.success(res.data.message)).catch((err)=>toast.error(err.response.data.message));
       setCartItems([])
   

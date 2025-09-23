@@ -20,7 +20,7 @@ export default function UserLogin() {
 
          event.preventDefault();
 
-         axios.post("http://localhost:5000/user/login",login)
+         axios.post("https://cravecart-5vz7.onrender.com/user/login",login)
          .then((res)=>{ toast.success(res.data.message);
            localStorage.setItem("token",res.data.token) ;
            localStorage.setItem("id",res.data.id) ;

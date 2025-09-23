@@ -13,7 +13,7 @@ export default function RestaurantOrderCard({index,order}) {
   }, [order.status]);
 
     function changestatus(id,newstatus){
-      axios.patch("http://localhost:5000/restaurant/order/statuschange/"+id,{status:newstatus},{headers:{Authorization:"Bearer "+localStorage.getItem("token")}})
+      axios.patch("https://cravecart-5vz7.onrender.com/restaurant/order/statuschange/"+id,{status:newstatus},{headers:{Authorization:"Bearer "+localStorage.getItem("token")}})
       .then((res)=>{ toast.success(res.data.message)})
       .catch((err)=>toast.error("Error Occured : "+err.response.data.message))
     }
@@ -24,7 +24,7 @@ export default function RestaurantOrderCard({index,order}) {
                 <td>
                   <div className="d-flex align-items-center">
                     <img 
-                      src={"http://localhost:5000"+order.menuid.image} 
+                      src={"https://cravecart-5vz7.onrender.com"+order.menuid.image} 
                       alt={order.menuid.name} 
                       style={{ width: "40px", height: "40px", objectFit: "cover", borderRadius: "4px", marginRight: "8px" }}
                     />

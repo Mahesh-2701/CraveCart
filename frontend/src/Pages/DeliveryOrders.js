@@ -5,14 +5,14 @@ import axios from 'axios'
 import { toast, ToastContainer } from 'react-toastify'
 import { io } from "socket.io-client"
 
-const socket = io("http://localhost:5000")
+const socket = io("https://cravecart-5vz7.onrender.com")
 
 
 export default function DeliveryOrders() {
     const [orders,setOrders] = useState([])
 
     useEffect(()=>{
-        axios.get("http://localhost:5000/delivery/order/"+localStorage.getItem("id"),{headers:{Authorization:"Bearer "+localStorage.getItem("token")}})
+        axios.get("https://cravecart-5vz7.onrender.com/delivery/order/"+localStorage.getItem("id"),{headers:{Authorization:"Bearer "+localStorage.getItem("token")}})
         .then((res)=>setOrders(res.data)).catch((err)=>toast.error("Network Error "+err.response.data.message))
 
        socket.on("updatingDelivery",(data)=>setOrders(data))
@@ -49,7 +49,7 @@ export default function DeliveryOrders() {
               <td>
                 <div className="d-flex align-items-center">
                   <img 
-                    src={"http://localhost:5000"+order.menuid.image} 
+                    src={"https://cravecart-5vz7.onrender.com"+order.menuid.image} 
                     alt={order.menuid.name} 
                     style={{ width: "40px", height: "40px", objectFit: "cover", borderRadius: "4px", marginRight: "8px" }}
                   />

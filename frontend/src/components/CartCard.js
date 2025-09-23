@@ -17,7 +17,7 @@ export default function CartCard(props) {
     <div>
                 <div className="card shadow-sm h-100">
                   <img
-                    src={"http://localhost:5000" + items.menuid.image}
+                    src={"https://cravecart-5vz7.onrender.com" + items.menuid.image}
                     className="card-img-top"
                     alt={item.name}
                     style={{ height: "200px", objectFit: "cover" }}

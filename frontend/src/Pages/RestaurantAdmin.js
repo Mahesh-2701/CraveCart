@@ -20,7 +20,7 @@ export default function RestaurantAdmin() {
 
   useEffect(() => {
     axios
-      .get("http://localhost:5000/restaurant/details/" + localStorage.getItem("id"), {
+      .get("https://cravecart-5vz7.onrender.com/restaurant/details/" + localStorage.getItem("id"), {
         headers: { Authorization:"Bearer "+ localStorage.getItem("token") },
       })
       .then((res) => {
@@ -34,7 +34,7 @@ export default function RestaurantAdmin() {
 
   //for changing the availability status
   function availability(id,newstatus){
-        axios.patch("http://localhost:5000/restaurant/availability/"+id,{ isactive: newstatus},{headers:{Authorization:"Bearer "+localStorage.getItem("token")}})
+        axios.patch("https://cravecart-5vz7.onrender.com/restaurant/availability/"+id,{ isactive: newstatus},{headers:{Authorization:"Bearer "+localStorage.getItem("token")}})
         .then((res)=>toast.success(res.data.message))
         .catch((err)=>toast.error("Error Occured : "+err.response.data.message))
   }
@@ -44,7 +44,7 @@ export default function RestaurantAdmin() {
 
   useEffect(()=>{
     axios
-      .get("http://localhost:5000/restaurant/menudisplay/" +localStorage.getItem("id"), {
+      .get("https://cravecart-5vz7.onrender.com/restaurant/menudisplay/" +localStorage.getItem("id"), {
         headers: { Authorization:"Bearer "+ localStorage.getItem("token") },
       })
       .then((res) => {
@@ -67,12 +67,12 @@ export default function RestaurantAdmin() {
   function deletemenu(Id){
       if(window.confirm("Are you Sure Want To Delete?")){
         axios
-      .delete("http://localhost:5000/restaurant/deletemenu/"+Id, {
+      .delete("https://cravecart-5vz7.onrender.com/restaurant/deletemenu/"+Id, {
         headers: { Authorization:"Bearer "+ localStorage.getItem("token") }} )
       .then((res) => {
         toast.success(res.data.message) ; 
 
-        axios.get("http://localhost:5000/restaurant/menudisplay/" +localStorage.getItem("id"), {
+        axios.get("https://cravecart-5vz7.onrender.com/restaurant/menudisplay/" +localStorage.getItem("id"), {
           headers: { Authorization:"Bearer "+ localStorage.getItem("token") },
         })
         .then((res) => {  setMenu(res.data);  }).catch((err) => {  toast.error(err.message);});
@@ -107,12 +107,12 @@ export default function RestaurantAdmin() {
     console.log(formdata)
 
     axios
-      .post("http://localhost:5000/restaurant/menuupload", formdata, {
+      .post("https://cravecart-5vz7.onrender.com/restaurant/menuupload", formdata, {
         headers: { Authorization:"Bearer "+ localStorage.getItem("token") }} )
       .then((res) =>{
          toast.success(res.data.message);
 
-        axios.get("http://localhost:5000/restaurant/menudisplay/" +localStorage.getItem("id"), {
+        axios.get("https://cravecart-5vz7.onrender.com/restaurant/menudisplay/" +localStorage.getItem("id"), {
           headers: { Authorization:"Bearer "+ localStorage.getItem("token") },
          })
         .then((res) => {  setMenu(res.data);  }).catch((err) => {  toast.error("Error Occured : "+err.response.data.message);});
@@ -197,7 +197,7 @@ export default function RestaurantAdmin() {
                         <tr key={item.id}>
                           <td>{index + 1}</td>
                           <td>{item.name}</td>
-                          <td><img src={"http://localhost:5000"+item.image} className="img-fluid rounded-2" width={"90px"} height={"60px"}/></td>
+                          <td><img src={"https://cravecart-5vz7.onrender.com"+item.image} className="img-fluid rounded-2" width={"90px"} height={"60px"}/></td>
                           <td>{item.description}</td>
                           <td>₹{item.price}</td>
                           <td><button className="btn btn-danger" onClick={ ()=> deletemenu(item._id)}>Delete</button></td>

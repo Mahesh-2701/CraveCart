@@ -3,7 +3,7 @@ const mongoose=require("mongoose")
 const dbconnect = async()=>{
 
     try{
-        mongoose.connect("mongodb://localhost:27017/project");
+        mongoose.connect("mongodb+srv://maheshmdu27_db_user:mZcaHOA2luapXQYT@cluster0.ajejyjz.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0");
         console.log("Database Connected")
     }
     catch(err){

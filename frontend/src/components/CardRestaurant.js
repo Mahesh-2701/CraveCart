@@ -10,7 +10,7 @@ export default function CardRestaurant(props) {
      <div className="card food-card shadow-sm border-0">
         <div className="img-wrapper">
           <img
-            src={"http://localhost:5000"+image}
+            src={"https://cravecart-5vz7.onrender.com"+image}
             className="card-img-top"
             alt="Food"
           />

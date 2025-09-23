@@ -20,7 +20,7 @@ export default function AdminLogin() {
 
          event.preventDefault();
 
-         axios.post("http://localhost:5000/admin/login",login)
+         axios.post("https://cravecart-5vz7.onrender.com/admin/login",login)
          .then((res)=>{ toast.success(res.data.message);
            localStorage.setItem("token",res.data.token) ;
            localStorage.setItem("id",res.data.id) ;

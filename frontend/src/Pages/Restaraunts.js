@@ -13,7 +13,7 @@ export default function Restaurant() {
 
   useEffect(() => {
     axios
-      .get("http://localhost:5000/user/restaurant")
+      .get("https://cravecart-5vz7.onrender.com/user/restaurant")
       .then((res) => setRestaurants(res.data))
       .catch((err) => toast.error("Network Connection Error " + err.message));
   }, []);

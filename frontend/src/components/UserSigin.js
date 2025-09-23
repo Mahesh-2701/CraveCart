@@ -65,7 +65,7 @@ export default function UserSigin() {
           }
 
 
-           axios.post("http://localhost:5000/user/signin",user)
+           axios.post("https://cravecart-5vz7.onrender.com/user/signin",user)
            .then((res)=>{ toast.success(res.data.message) ; setTimeout(()=>navigate("/"),2000)})
            .catch((err)=>{ toast.error("Network Error or Email already exists")})
     }

@@ -29,7 +29,7 @@ export default function UserProfile() {
         });
 
     useEffect(()=>{
-        axios.get("http://localhost:5000/user/view/"+userid,{headers:{Authorization:"Bearer "+localStorage.getItem("token")}})
+        axios.get("https://cravecart-5vz7.onrender.com/user/view/"+userid,{headers:{Authorization:"Bearer "+localStorage.getItem("token")}})
         .then((res)=>setDelperson({...res.data})).catch((err)=>toast.error("Network Error "+err.message))
     },[])
 
@@ -56,7 +56,7 @@ export default function UserProfile() {
              setErrormsg((prev)=>({...prev,pincode:false}))
           }
          
-         axios.put("http://localhost:5000/user/update/"+userid,delperson,{headers:{Authorization:"Bearer "+localStorage.getItem("token")}})
+         axios.put("https://cravecart-5vz7.onrender.com/user/update/"+userid,delperson,{headers:{Authorization:"Bearer "+localStorage.getItem("token")}})
         .then((res)=>{
           toast.success(res.data.message);
           setTimeout(()=>navigate("/user/login"),1500)

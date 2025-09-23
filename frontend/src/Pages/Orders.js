@@ -5,14 +5,14 @@ import { toast, ToastContainer } from "react-toastify";
 import axios from "axios";
 import { io } from "socket.io-client"
 
-const socket = io("http://localhost:5000")
+const socket = io("https://cravecart-5vz7.onrender.com")
 
 export default function Orders() {
   const [orders, setOrders] = useState([]);
 
   useEffect(() => {
     axios
-      .get("http://localhost:5000/user/orders/" + localStorage.getItem("id"), {
+      .get("https://cravecart-5vz7.onrender.com/user/orders/" + localStorage.getItem("id"), {
         headers: { Authorization: "Bearer " + localStorage.getItem("token") },
       })
       .then((res) => setOrders(res.data))
@@ -48,7 +48,7 @@ export default function Orders() {
                   <div className="row g-0">
                     <div className="col-4">
                       <img
-                        src={"http://localhost:5000" + order.menuid.image}
+                        src={"https://cravecart-5vz7.onrender.com" + order.menuid.image}
                         className="img-fluid rounded-start"
                         alt={order.menuid.name}
                         style={{

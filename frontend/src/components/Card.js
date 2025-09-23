@@ -15,7 +15,7 @@ export default function Card(props) {
         price:price
       }
 
-    axios.post("http://localhost:5000/user/addtocart",cartitem,{ headers : { Authorization : "Bearer "+localStorage.getItem("token")}})
+    axios.post("https://cravecart-5vz7.onrender.com/user/addtocart",cartitem,{ headers : { Authorization : "Bearer "+localStorage.getItem("token")}})
     .then((res)=>{ toast.success("Added to cart")})
     .catch((err)=>toast.error("Please Login to Continue Shopping"))      
   }
@@ -25,7 +25,7 @@ export default function Card(props) {
       <div className="card food-card shadow-sm border-0 mx-2 my-2 position-relative">
         <div className="img-wrapper">
           <img
-            src={"http://localhost:5000" + image}
+            src={"https://cravecart-5vz7.onrender.com" + image}
             className="card-img-top"
             alt="Food"
           />

@@ -6,7 +6,7 @@ import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import { io } from "socket.io-client";
 
-const socket = io("http://localhost:5000")
+const socket = io("https://cravecart-5vz7.onrender.com")
 
 export default function Foods() {
   const [foods, setFoods] = useState([]);
@@ -18,7 +18,7 @@ export default function Foods() {
 
   useEffect(() => {
     axios
-      .get("http://localhost:5000/user/foods")
+      .get("https://cravecart-5vz7.onrender.com/user/foods")
       .then((res) => setFoods(res.data))
       .catch((err) => toast.error("Network Connection Error " + err.message));
 

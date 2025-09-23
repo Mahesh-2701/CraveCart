@@ -27,7 +27,7 @@ export default function DeliveryPersonView() {
         });
 
     useEffect(()=>{
-        axios.get("http://localhost:5000/delivery/view/"+deliverypersonid,{headers:{Authorization:"Bearer "+localStorage.getItem("token")}})
+        axios.get("https://cravecart-5vz7.onrender.com/delivery/view/"+deliverypersonid,{headers:{Authorization:"Bearer "+localStorage.getItem("token")}})
         .then((res)=>setDelperson({...res.data})).catch((err)=>toast.error("Network Error "+err.message))
     },[])
 
@@ -47,7 +47,7 @@ export default function DeliveryPersonView() {
              setErrormsg((prev)=>({...prev,phonenumber:false}))
           }
          
-         axios.put("http://localhost:5000/delivery/update/"+deliverypersonid,delperson,{headers:{Authorization:"Bearer "+localStorage.getItem("token")}})
+         axios.put("https://cravecart-5vz7.onrender.com/delivery/update/"+deliverypersonid,delperson,{headers:{Authorization:"Bearer "+localStorage.getItem("token")}})
         .then((res)=>{
           toast.success(res.data.message);
           setTimeout(()=>navigate("/delivery"),1500)

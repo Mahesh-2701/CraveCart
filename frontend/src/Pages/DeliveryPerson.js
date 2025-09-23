@@ -23,7 +23,7 @@ export default function DeliveryPerson() {
     
              event.preventDefault();
     
-             axios.post("http://localhost:5000/delivery/login",login)
+             axios.post("https://cravecart-5vz7.onrender.com/delivery/login",login)
              .then((res)=>{ 
                 toast.success(res.data.message);
                  localStorage.setItem("token",res.data.token) ;
@@ -83,7 +83,7 @@ export default function DeliveryPerson() {
                }
      
      
-                axios.post("http://localhost:5000/delivery/signin",user)
+                axios.post("https://cravecart-5vz7.onrender.com/delivery/signin",user)
                 .then((res)=>toast.success(res.data.message) )
                 .catch((err)=>{ toast.error("Email Already Exists Or "+err.response.data.message)})
          }

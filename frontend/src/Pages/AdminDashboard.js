@@ -12,7 +12,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     axios
-      .get("http://localhost:5000/admin/dashboard", {
+      .get("https://cravecart-5vz7.onrender.com/admin/dashboard", {
         headers: { Authorization: "Bearer " + localStorage.getItem("token") },
       })
       .then((res) => {
