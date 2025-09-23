@@ -120,45 +120,22 @@ const Navbar = () => {
                     Orders
                   </Link>
                 </li>
-                <li className="nav-item me-2">
-                  <div class="dropdown">
-                    <Link
-                      to="#"
-                      class="d-flex align-items-center text-dark text-decoration-none dropdown-toggle"
-                      data-bs-toggle="dropdown"
-                      aria-expanded="false"
-                    >
-                      {" "}
-                      <img
-                        src="https://images.icon-icons.com/3251/PNG/512/settings_regular_icon_203305.png"
-                        alt=""
-                        width="32"
-                        height="32"
-                        class="rounded-circle "
-                      />
-                    </Link>
-                    <ul class="dropdown-menu dropdown-menu-light text-small shadow">
-                      <li>
-                        <Link class="dropdown-item" to="/user/update">
-                          Profile
-                        </Link>
-                      </li>
-                      <li>
-                        <hr class="dropdown-divider" />
-                      </li>
-                      <li>
-                        <Link
-                          class="dropdown-item"
-                          to="/logout"
-                          onClick={() => {
-                            setIsAuth(false);
-                          }}
-                        >
-                          Logout
-                        </Link>
-                      </li>
-                    </ul>
-                  </div>
+                <li className="nav-item">
+                  <Link class="dropdown-item" to="/user/update">
+                    Profile
+                  </Link>
+                </li>
+
+                <li className="text-decoration-none">
+                  <Link
+                    class="btn btn-outline-danger rounded-pill px-3"
+                    to="/logout"
+                    onClick={() => {
+                      setIsAuth(false);
+                    }}
+                  >
+                    Logout
+                  </Link>
                 </li>
               </>
             )}
