@@ -223,9 +223,9 @@ restRoute.get("/order/:id",validatetoken,async(req,res)=>{
      const orders = await orderSchema.find().populate({  path: "menuid", populate: { path: "restaurantid" }}).populate("userid")
                         .populate("deliverypersonid").sort({ createdAt: -1 });
 
-        const restaurantOrders = orders.filter(
-            order => order.menuid.restaurantid._id.toString() === restaurantid.toString()
-            );
+        const restaurantOrders = orders.filter(order =>
+  order?.menuid?.restaurantid?._id?.toString() === restaurantid.toString()
+);
 
       res.status(200).json(restaurantOrders)
     }
