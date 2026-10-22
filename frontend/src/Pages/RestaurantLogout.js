@@ -1,20 +1,17 @@
-import React, { useEffect } from 'react'
-import { useNavigate } from 'react-router-dom';
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function RestaurantLogout() {
-   const navigate = useNavigate();
-  
-    useEffect(() => {
-      localStorage.removeItem("id");
-      localStorage.removeItem("token");
-      localStorage.removeItem("role");
-  
-      navigate("/restaurant/view");
-    }, [navigate]);
+  const navigate = useNavigate();
 
-  return (
-    <div>
-      
-    </div>
-  )
+  useEffect(() => {
+    localStorage.removeItem("id");
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    localStorage.removeItem("name");
+    localStorage.removeItem("email");
+    navigate("/restaurant/view");
+  }, [navigate]);
+
+  return null;
 }

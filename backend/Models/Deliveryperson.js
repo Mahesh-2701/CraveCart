@@ -1,51 +1,45 @@
-const mongoose=require("mongoose")
-const bcrypt=require("bcryptjs")
+const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
 
-const deliverySchema=new mongoose.Schema({
-    name:{type:String,required:true},
-    email:{ type:String,required:true,unique:true},
-    password:{type:String,required:true},
-    phonenumber:{type:Number},
-    address:String,
-    role:{type:String,default:"deliveryperson"}
-})
+const deliverySchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true, trim: true },
+    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    password: { type: String, required: true },
+    phonenumber: { type: Number },
+    address: { type: String, default: "" },
+    role: { type: String, default: "deliveryperson" },
+    isAvailable: { type: Boolean, default: true },
+    vehicleType: { type: String, default: "Bike" },
+    rating: { type: Number, default: 4.8, min: 1, max: 5 },
+    totalDeliveries: { type: Number, default: 0 },
+    currentLocation: {
+      lat: { type: Number, default: 12.9716 },
+      lng: { type: Number, default: 77.5946 },
+      updatedAt: { type: Date, default: Date.now },
+    },
+  },
+  { timestamps: true }
+);
 
-deliverySchema.pre("save",async function(next){
-
-    if(!this.isModified("password")) return next()
-
-    this.password=await bcrypt.hash(this.password,10)
-    next()
-})
-
-deliverySchema.pre("findOneAndUpdate", async function (next) {
-  const update = this.getUpdate();
-
-  if (update.password) {
-    // get the current user document
-    const docToUpdate = await this.model.findOne(this.getQuery());
-
-    // check if the new password is already hashed
-    const isHashed = docToUpdate.password === update.password;
-
-    if (!isHashed) {
-      const salt = await bcrypt.genSalt(10);
-      update.password = await bcrypt.hash(update.password, salt);
-    }
-
-    this.setUpdate(update);
+deliverySchema.pre("save", async function (next) {
+  if (!this.isModified("password")) return next();
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (err) {
+    next(err);
   }
-
-  next();
 });
 
+deliverySchema.methods.comparepassword = async function (enteredpassword) {
+  if (this.password && this.password.startsWith("$2")) {
+    return await bcrypt.compare(enteredpassword, this.password);
+  }
+  return this.password === enteredpassword;
+};
 
+const deliveryModel = mongoose.model("deliveryperson", deliverySchema);
 
-
-deliverySchema.methods.comparepassword =async function(enteredpassword){
-    return await bcrypt.compare(enteredpassword,this.password)
-}
-
-const deliveryModel=mongoose.model("deliveryperson",deliverySchema)
-
-module.exports = deliveryModel
+module.exports = deliveryModel;

@@ -1,14 +1,11 @@
-import React from 'react'
-import { Navigate, Outlet } from 'react-router-dom'
+import React from "react";
+import { Navigate, Outlet } from "react-router-dom";
 
-export default function ProtectedrouteDelivery({children}) {
-  
-   const isAuth = localStorage.getItem("token") && localStorage.getItem("role") == "deliveryperson"
+export default function ProtectedRouteDelivery() {
+  const role = localStorage.getItem("role");
+  const isAuth = Boolean(
+    localStorage.getItem("token") && (role === "deliveryperson" || role === "delivery")
+  );
 
-   if(!isAuth){
-    return <Navigate to="/delivery"></Navigate>
-   }
-   else{
-    return <Outlet></Outlet>
-   }
+  return isAuth ? <Outlet /> : <Navigate to="/delivery" replace />;
 }

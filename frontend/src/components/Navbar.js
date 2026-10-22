@@ -1,148 +1,234 @@
-import React, { useState } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import api from "../config/api";
 
 const Navbar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [isAuth, setIsAuth] = useState(
-    Boolean(
-      localStorage.getItem("token") && localStorage.getItem("role") === "user"
-    )
+    Boolean(localStorage.getItem("token") && localStorage.getItem("role") === "user")
   );
+  const userName = localStorage.getItem("name") || "Account";
+  const [cartCount, setCartCount] = useState(0);
+
+  const userId = localStorage.getItem("id");
+
+  useEffect(() => {
+    if (isAuth && userId) {
+      api
+        .get(`/user/cartdisplay/${userId}`)
+        .then((res) => {
+          if (Array.isArray(res.data)) {
+            setCartCount(res.data.length);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isAuth, userId]);
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    localStorage.removeItem("id");
+    localStorage.removeItem("name");
+    localStorage.removeItem("email");
+    setIsAuth(false);
+    navigate("/");
+  };
 
   return (
-    <nav className="navbar navbar-expand-lg rounded-bottom-5 border sticky-top bg-white shadow-lg px-3">
-      <div className="container-fluid d-flex justify-content-between align-items-center">
-        {/* Brand Logo */}
-        <Link to="/" className="navbar-brand d-flex align-items-center">
-          {/* Replace with Swiggy logo */}
-          <svg
-            width="35"
-            height="35"
-            viewBox="0 0 100 100"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            className="me-2"
-          >
-            <circle cx="50" cy="50" r="48" fill="#FF6F00" />
-            <text
-              x="50"
-              y="58"
-              textAnchor="middle"
-              fontSize="40"
-              fill="#fff"
-              fontFamily="sans-serif"
+    <>
+      {/* Top Navbar */}
+      <nav className="navbar navbar-expand-lg sticky-top bg-white border-bottom shadow-sm px-3 py-2">
+        <div className="container d-flex justify-content-between align-items-center">
+          {/* Brand Logo */}
+          <Link to="/" className="navbar-brand d-flex align-items-center gap-2">
+            <div
+              className="rounded-circle d-flex align-items-center justify-content-center shadow-sm"
+              style={{
+                width: "40px",
+                height: "40px",
+                background: "linear-gradient(135deg, #FF5200 0%, #FF7A00 100%)",
+                color: "#ffffff",
+                fontWeight: "800",
+                fontSize: "20px",
+              }}
             >
               C
-            </text>
-          </svg>
-          <span className="fw-bold text-dark">CraveCart</span>
-        </Link>
+            </div>
+            <div>
+              <span className="fw-bold fs-4 text-dark" style={{ letterSpacing: "-0.5px" }}>
+                Crave<span className="text-primary">Cart</span>
+              </span>
+              <span className="badge bg-light text-muted border ms-2 small" style={{ fontSize: "10px" }}>
+                V2.0
+              </span>
+            </div>
+          </Link>
 
-        <ul class="navbar-nav ms-auto me-2 order-1 order-lg-2 d-flex flex-row">
-          {!isAuth ? (
-            <li className="nav-item">
-              <Link
-                to="/user/login"
-                className="btn btn-secondary rounded-pill px-3"
-              >
-                Log In
+          {/* Quick Cart button for mobile header */}
+          <div className="d-flex align-items-center d-lg-none gap-2">
+            {isAuth && (
+              <Link to="/user/cart" className="btn btn-sm btn-outline-primary rounded-pill px-3 position-relative">
+                🛒
+                {cartCount > 0 && (
+                  <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                    {cartCount}
+                  </span>
+                )}
               </Link>
-            </li>
-          ) : (
-            <>
-              <li className="nav-item ">
+            )}
+            <button
+              className="navbar-toggler border-0 shadow-none"
+              type="button"
+              data-bs-toggle="collapse"
+              data-bs-target="#navbarNav"
+              aria-controls="navbarNav"
+              aria-expanded="false"
+              aria-label="Toggle navigation"
+            >
+              <span className="navbar-toggler-icon" />
+            </button>
+          </div>
+
+          {/* Navbar Links */}
+          <div className="collapse navbar-collapse" id="navbarNav">
+            <ul className="navbar-nav mx-auto align-items-center gap-1">
+              <li className="nav-item">
                 <Link
-                  to="/user/cart"
-                  className="btn btn-outline-secondary rounded-pill px-3 fw-bold "
+                  to="/"
+                  className={`nav-link fw-semibold px-3 ${location.pathname === "/" ? "text-primary" : ""}`}
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    fill="currentColor"
-                    class="bi bi-bag-fill"
-                    viewBox="0 0 16 16"
-                  >
-                    <path d="M8 1a2.5 2.5 0 0 1 2.5 2.5V4h-5v-.5A2.5 2.5 0 0 1 8 1m3.5 3v-.5a3.5 3.5 0 1 0-7 0V4H1v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V4z" />
-                  </svg>{" "}
-                  Cart
+                  Home
                 </Link>
               </li>
-            </>
-          )}
-        </ul>
+              <li className="nav-item">
+                <Link
+                  to="/foods"
+                  className={`nav-link fw-semibold px-3 ${location.pathname === "/foods" ? "text-primary" : ""}`}
+                >
+                  Dishes
+                </Link>
+              </li>
+              <li className="nav-item">
+                <Link
+                  to="/restaurants"
+                  className={`nav-link fw-semibold px-3 ${location.pathname === "/restaurants" ? "text-primary" : ""}`}
+                >
+                  Restaurants
+                </Link>
+              </li>
+            </ul>
 
-        {/* Toggler for mobile */}
-        <button
-          className="navbar-toggler order-2 order-lg-1"
-          type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#navbarNav"
-          aria-controls="navbarNav"
-          aria-expanded="false"
-          aria-label="Toggle navigation"
-        >
-          <span className="navbar-toggler-icon"></span>
-        </button>
-
-        {/* Navbar Links */}
-        <div className="collapse navbar-collapse" id="navbarNav">
-          {/* Right section: Links */}
-          <ul className="navbar-nav ms-auto align-items-center gap-2">
-            <li className="nav-item">
-              <Link to="/foods" className="nav-link fw-semibold me-2">
-                Foods
-              </Link>
-            </li>
-
-            <li className="nav-item">
-              <Link to="/restaurants" className="nav-link fw-semibold">
-                Restaurants
-              </Link>
-            </li>
-
-            {!isAuth ? (
-              <>
-                <li className="nav-item">
-                  <Link
-                    to="/user/signup"
-                    className="btn btn-outline-secondary rounded-pill px-3"
-                  >
-                    Sign In
+            {/* Right Side User Profile & Actions */}
+            <div className="d-flex align-items-center gap-2">
+              {!isAuth ? (
+                <>
+                  <Link to="/user/login" className="btn btn-sm btn-outline-secondary rounded-pill px-3">
+                    Log In
                   </Link>
-                </li>
-              </>
-            ) : (
-              <>
-                <li className="nav-item">
-                  <Link to="/user/orders" className="nav-link fw-semibold">
+                  <Link to="/user/signup" className="btn btn-sm btn-primary-crave px-3">
+                    Sign Up
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link
+                    to="/user/cart"
+                    className="btn btn-sm btn-outline-primary rounded-pill px-3 position-relative d-none d-lg-inline-flex align-items-center gap-1"
+                  >
+                    <span>🛒 Cart</span>
+                    {cartCount > 0 && (
+                      <span className="badge rounded-pill bg-danger ms-1">{cartCount}</span>
+                    )}
+                  </Link>
+
+                  <Link to="/user/orders" className="btn btn-sm btn-light border rounded-pill px-3 fw-semibold">
                     Orders
                   </Link>
-                </li>
-                <li className="nav-item">
-                  <Link class="dropdown-item" to="/user/update">
-                    Profile
-                  </Link>
-                </li>
 
-                <li className="text-decoration-none">
-                  <Link
-                    class="btn btn-outline-danger rounded-pill px-3"
-                    to="/logout"
-                    onClick={() => {
-                      setIsAuth(false);
-                    }}
-                  >
-                    Logout
-                  </Link>
-                </li>
-              </>
-            )}
-          </ul>
+                  <div className="dropdown">
+                    <button
+                      className="btn btn-sm btn-light border rounded-pill px-3 dropdown-toggle fw-semibold"
+                      type="button"
+                      data-bs-toggle="dropdown"
+                    >
+                      👤 {userName.split(" ")[0]}
+                    </button>
+                    <ul className="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3">
+                      <li>
+                        <Link className="dropdown-item" to="/user/update">
+                          Profile Settings
+                        </Link>
+                      </li>
+                      <li>
+                        <Link className="dropdown-item" to="/user/orders">
+                          My Orders
+                        </Link>
+                      </li>
+                      <li>
+                        <hr className="dropdown-divider" />
+                      </li>
+                      <li>
+                        <button className="dropdown-item text-danger" onClick={handleLogout}>
+                          Log Out
+                        </button>
+                      </li>
+                    </ul>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
         </div>
+      </nav>
+
+      {/* Mobile Bottom Navigation Bar */}
+      <div className="mobile-bottom-nav">
+        <Link to="/" className={`bottom-nav-item ${location.pathname === "/" ? "active" : ""}`}>
+          <span style={{ fontSize: "18px" }}>🏠</span>
+          <span>Home</span>
+        </Link>
+        <Link to="/foods" className={`bottom-nav-item ${location.pathname === "/foods" ? "active" : ""}`}>
+          <span style={{ fontSize: "18px" }}>🍔</span>
+          <span>Dishes</span>
+        </Link>
+        <Link
+          to="/restaurants"
+          className={`bottom-nav-item ${location.pathname === "/restaurants" ? "active" : ""}`}
+        >
+          <span style={{ fontSize: "18px" }}>🏬</span>
+          <span>Restaurants</span>
+        </Link>
+        {isAuth && (
+          <>
+            <Link
+              to="/user/cart"
+              className={`bottom-nav-item position-relative ${location.pathname === "/user/cart" ? "active" : ""}`}
+            >
+              <span style={{ fontSize: "18px" }}>🛒</span>
+              <span>Cart</span>
+              {cartCount > 0 && (
+                <span
+                  className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                  style={{ fontSize: "9px" }}
+                >
+                  {cartCount}
+                </span>
+              )}
+            </Link>
+            <Link
+              to="/user/orders"
+              className={`bottom-nav-item ${location.pathname === "/user/orders" ? "active" : ""}`}
+            >
+              <span style={{ fontSize: "18px" }}>📦</span>
+              <span>Orders</span>
+            </Link>
+          </>
+        )}
       </div>
-    </nav>
+    </>
   );
 };
 

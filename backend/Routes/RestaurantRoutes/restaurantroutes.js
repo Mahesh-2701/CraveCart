@@ -1,303 +1,293 @@
-const express = require("express")
-const multer=require("multer")
-const jwt=require("jsonwebtoken")
-const path=require("path")
-const restSchema=require("../../Models/RestaurantSchema")
-const menuSchema=require("../../Models/Menuitems")
-const orderSchema = require("../../Models/OrderSchema")
+const express = require("express");
+const multer = require("multer");
+const path = require("path");
+const restSchema = require("../../Models/RestaurantSchema");
+const menuSchema = require("../../Models/Menuitems");
+const orderSchema = require("../../Models/OrderSchema");
+const { signToken } = require("../../config/auth.config");
+const { authenticate, authorizeRoles } = require("../../middleware/auth.middleware");
+const { sendStatusUpdate } = require("../../services/email.service");
 
-const restRoute=express.Router();
+const restRoute = express.Router();
+restRoute.use(express.json());
+restRoute.use(express.urlencoded({ extended: true }));
 
-const secrettoken="mahiraji"
+// Multer storage
+const storage = multer.diskStorage({
+  destination: path.join(__dirname, "../../uploads/restaurants"),
+  filename: function (req, file, cb) {
+    const filename = Date.now() + "_" + file.originalname.replace(/\s+/g, "_");
+    cb(null, filename);
+  },
+});
 
-restRoute.use(express.json())
-restRoute.use(express.urlencoded())
+const fileFilter = (req, file, cb) => {
+  const allowedtypes = /jpeg|jpg|png|webp/;
+  const extension = allowedtypes.test(path.extname(file.originalname).toLowerCase());
+  const mimetype = allowedtypes.test(file.mimetype);
 
-
-
-// jwt portion
-
-const validatetoken=(req,res,next)=>{
-    const token =req.headers["authorization"];
-    const tokenonly=token && token.split(" ")[1];
-
-    if(tokenonly){
-
-        jwt.verify(tokenonly,secrettoken,(err,payload)=>{
-            if(err) return res.status(400).json({message:"Token invalid"})
-
-                req.restaurant=payload
-        })
-        
-        
-    }
-    else{
-        return  res.status(400).json({message:"Token Required"})
-    }
-
-    next()
-}
-
-// multer portion
-
-const storage=multer.diskStorage({
-    destination:path.join(__dirname, "../../uploads/restaurants"),
-    filename : function(req,file,cb){
-        let filesname = Date.now()+"_"+file.originalname;
-        cb(null,filesname)
-    }
-
-})
-
-let filefilter = (req,file,cb)=>{
-    let allowedtypes=/jpeg|jpg|png/
-    let extension = allowedtypes.test(path.extname(file.originalname).toLowerCase())
-    let mimetype = allowedtypes.test(file.mimetype)
-
-    if( extension && mimetype){
-        cb(null,true)
-    }
-    else{
-        cb(new Error("Only images are allowed"))
-    }
-}
+  if (extension && mimetype) {
+    cb(null, true);
+  } else {
+    cb(new Error("Only images (jpeg, jpg, png, webp) are allowed"));
+  }
+};
 
 const upload = multer({
-    storage:storage,
-    limit:{
-        fileSize: 15 * 1024 *1024
-    },
-    fileFilter:filefilter
-})
+  storage: storage,
+  limits: { fileSize: 15 * 1024 * 1024 },
+  fileFilter: fileFilter,
+});
 
+/**
+ * Restaurant Sign In / Register
+ */
+restRoute.post("/signin", upload.single("image"), async (req, res) => {
+  let restaurant = { ...req.body };
+  let imagename = req.file ? "/uploads/restaurants/" + req.file.filename : "/uploads/restaurants/default.jpg";
 
-restRoute.post("/signin",upload.single("image"),async (req,res)=>{
-    
-    let restaurant = { ...req.body}
-    let imagename = "/uploads/restaurants/"+req.file.filename
-
-    try{
-
-        await restSchema.create({...restaurant,image:imagename})
-        res.status(200).json({message:"Signin Success! Please Login to Continue"})
-
-    }catch(err){
-       res.status(400).json({message:"Signin Failed : "+err.message})
-    }
-    
-})
-
-restRoute.post("/login",async(req,res)=>{
-      
-    let enteredemail=req.body.email;
-    let enteredpassword=req.body.password;
-
-    try{
-      
-        let result = await restSchema.findOne({email:enteredemail},{password:true,email:true,role:true})
-
-        if(result){
-
-            let comparingpassword=await result.comparepassword(enteredpassword);
-             
-            if(comparingpassword){
-                
-                const token = jwt.sign({email:result.email,role:result.role,id:result._id},secrettoken,{expiresIn:"6h"});
-                console.log(token,result.email);
-                res.status(200).json({ message:"Login Success",token:token,role:result.role,id:result.id })
-            }
-            else{
-                res.status(400).json({message:"Invalid Password"})
-            }
-
-        }
-        else{
-            res.status(400).json({message:"Invalid Email Credentials"})
-        }
-    }
-    catch(err){
-        console.log(err)
-        res.status(400).json({message:"Server Error : "+err.message})
+  try {
+    const existing = await restSchema.findOne({ email: restaurant.email });
+    if (existing) {
+      return res.status(400).json({ message: "Restaurant email already exists." });
     }
 
-    
-})
+    const created = await restSchema.create({ ...restaurant, image: imagename });
+    return res.status(200).json({ message: "Signin Success! Please Login to Continue", id: created._id });
+  } catch (err) {
+    return res.status(400).json({ message: "Signin Failed : " + err.message });
+  }
+});
 
-restRoute.get("/details/:id",validatetoken,async(req,res)=>{
-    const id=req.params.id;
+/**
+ * Restaurant Login
+ */
+restRoute.post("/login", async (req, res) => {
+  const enteredemail = (req.body.email || "").trim().toLowerCase();
+  const enteredpassword = req.body.password;
 
-    try{
-       let result=await restSchema.findById(id)
-       
-       res.status(200).json(result)
-    }
-    catch(err){
-       console.log(err)
-        res.status(400).json({message:"Server Error : "+err.message})
-    }
+  try {
+    const result = await restSchema.findOne({ email: enteredemail });
 
-})
+    if (result) {
+      const isMatch = await result.comparepassword(enteredpassword);
 
-// for adding menu items
-
-restRoute.post("/menuupload",validatetoken,upload.single("image"),async(req,res)=>{
-        
-    let menu = {...req.body}
-    let menuimage = "/uploads/restaurants/"+req.file.filename
-
-
-    try{
-       await menuSchema.create({...menu,image:menuimage})
-
-      let result=await menuSchema.find().populate("restaurantid")
-      result.sort((a, b) => {
-          if (a.restaurantid.isactive && !b.restaurantid.isactive) {
-              return -1; 
-          }
-          if (!a.restaurantid.isactive && b.restaurantid.isactive) {
-              return 1; 
-          }
-          return 0; 
+      if (isMatch) {
+        const token = signToken({
+          email: result.email,
+          role: result.role || "restaurant",
+          id: result._id,
         });
-        req.io.emit("foodsData", result);
-         res.status(200).json({message:"Menu Item Added Successfully"})
-        
-    }
-    catch(err){
-       res.status(400).json({message:"Server Error : "+err.message})
-    }
 
-})
-
-//for displaying menu items
-
-restRoute.get("/menudisplay/:id",validatetoken,async(req,res)=>{
-
-    let restaurantid=req.params.id
-    
-    try{
-       var result = await menuSchema.find({restaurantid:restaurantid})
-       res.status(200).json(result)
-
-    }catch(err){ 
-        console.log(err)
-        res.status(400).json({message:"Server Error "+err.message})
-    }
-})
-
-//for deleting menu items
-
-restRoute.delete("/deletemenu/:id",validatetoken,async(req,res)=>{
-
-    let deleteid=req.params.id
-    
-    try{
-       await menuSchema.deleteOne({_id:deleteid})
-
-      let result=await menuSchema.find().populate("restaurantid")
-      result.sort((a, b) => {
-          if (a.restaurantid.isactive && !b.restaurantid.isactive) {
-              return -1; 
-          }
-          if (!a.restaurantid.isactive && b.restaurantid.isactive) {
-              return 1; 
-          }
-          return 0; 
+        return res.status(200).json({
+          message: "Login Success",
+          token: token,
+          role: result.role || "restaurant",
+          id: result._id,
+          name: result.name,
         });
-        req.io.emit("foodsData", result);
-
-       res.status(200).json({message:"Deleted Succesfully"})
-
-    }catch(err){ 
-        console.log(err)
-        res.status(400).json({message:"Server Error "+err.message})
+      } else {
+        return res.status(400).json({ message: "Invalid Password" });
+      }
+    } else {
+      return res.status(400).json({ message: "Invalid Email Credentials" });
     }
-})
+  } catch (err) {
+    return res.status(400).json({ message: "Server Error : " + err.message });
+  }
+});
 
-//displaying order items
+/**
+ * Restaurant Details
+ */
+restRoute.get("/details/:id", authenticate, async (req, res) => {
+  const id = req.params.id;
 
-restRoute.get("/order/:id",validatetoken,async(req,res)=>{
-    let restaurantid=req.params.id
+  try {
+    const result = await restSchema.findById(id).select("-password");
+    if (!result) return res.status(404).json({ message: "Restaurant not found" });
+    return res.status(200).json(result);
+  } catch (err) {
+    return res.status(400).json({ message: "Server Error : " + err.message });
+  }
+});
 
-    try{
-     const orders = await orderSchema.find().populate({  path: "menuid", populate: { path: "restaurantid" }}).populate("userid")
-                        .populate("deliverypersonid").sort({ createdAt: -1 });
+/**
+ * Menu Item Upload
+ */
+restRoute.post("/menuupload", authenticate, upload.single("image"), async (req, res) => {
+  let menu = { ...req.body };
+  let menuimage = req.file ? "/uploads/restaurants/" + req.file.filename : "/uploads/restaurants/default-food.jpg";
 
-        const restaurantOrders = orders.filter(order =>
-  order?.menuid?.restaurantid?._id?.toString() === restaurantid.toString()
-);
+  try {
+    await menuSchema.create({
+      ...menu,
+      image: menuimage,
+      isVeg: req.body.isVeg === "true" || req.body.isVeg === true,
+      price: Number(req.body.price),
+    });
 
-      res.status(200).json(restaurantOrders)
+    const result = await menuSchema.find().populate("restaurantid");
+    result.sort((a, b) => {
+      const aActive = Boolean(a.restaurantid && a.restaurantid.isactive);
+      const bActive = Boolean(b.restaurantid && b.restaurantid.isactive);
+      return (bActive ? 1 : 0) - (aActive ? 1 : 0);
+    });
+
+    if (req.io) {
+      req.io.emit("foodsData", result);
     }
-    catch(err){
-      res.status(200).json({message:"Server Error "+err.message})
+
+    return res.status(200).json({ message: "Menu Item Added Successfully" });
+  } catch (err) {
+    return res.status(400).json({ message: "Server Error : " + err.message });
+  }
+});
+
+/**
+ * Menu Items Display for Restaurant
+ */
+restRoute.get("/menudisplay/:id", authenticate, async (req, res) => {
+  const restaurantid = req.params.id;
+
+  try {
+    const result = await menuSchema.find({ restaurantid: restaurantid }).sort({ createdAt: -1 });
+    return res.status(200).json(result);
+  } catch (err) {
+    return res.status(400).json({ message: "Server Error " + err.message });
+  }
+});
+
+/**
+ * Delete Menu Item
+ */
+restRoute.delete("/deletemenu/:id", authenticate, async (req, res) => {
+  const deleteid = req.params.id;
+
+  try {
+    await menuSchema.deleteOne({ _id: deleteid });
+    const result = await menuSchema.find().populate("restaurantid");
+    if (req.io) {
+      req.io.emit("foodsData", result);
     }
-})
+    return res.status(200).json({ message: "Deleted Successfully" });
+  } catch (err) {
+    return res.status(400).json({ message: "Server Error " + err.message });
+  }
+});
 
-//order status changing
+/**
+ * Display Orders for Restaurant
+ */
+restRoute.get("/order/:id", authenticate, async (req, res) => {
+  const restaurantid = req.params.id;
 
-restRoute.patch("/order/statuschange/:id",validatetoken,async(req,res)=>{
-    let orderid = req.params.id
-    console.log(req.body.status)
-    try{
-        await orderSchema.findByIdAndUpdate(orderid,{ $set : { status : req.body.status }})
+  try {
+    const orders = await orderSchema
+      .find()
+      .populate({ path: "menuid", populate: { path: "restaurantid" } })
+      .populate("userid", "-password")
+      .populate("deliverypersonid")
+      .sort({ createdAt: -1 });
 
-        let orderdetail = await orderSchema.findById(orderid)
+    const restaurantOrders = orders.filter(
+      (order) => order?.menuid?.restaurantid?._id?.toString() === restaurantid.toString()
+    );
 
-        let result = await orderSchema.find({userid:orderdetail.userid}).populate("userid menuid deliverypersonid").sort({createdAt:-1})
-        req.io.emit("updatedOrder",result)
+    return res.status(200).json(restaurantOrders);
+  } catch (err) {
+    return res.status(500).json({ message: "Server Error " + err.message });
+  }
+});
 
-        let resultdelivery = await orderSchema.find({ deliverypersonid : orderdetail.deliverypersonid }).populate("userid")
-                                .populate({ path : "menuid" , populate : { path :"restaurantid"} }).populate("deliverypersonid").sort({createdAt:-1})
-                                          
-        
-        req.io.emit("updatingDelivery",resultdelivery)
+/**
+ * Order Status Change
+ */
+restRoute.patch("/order/statuschange/:id", authenticate, async (req, res) => {
+  const orderid = req.params.id;
+  const newStatus = req.body.status;
 
-        res.status(200).json({message:"Status Updated"})
+  try {
+    const updatedOrder = await orderSchema
+      .findByIdAndUpdate(
+        orderid,
+        {
+          $set: { status: newStatus },
+          $push: {
+            statusHistory: {
+              status: newStatus,
+              timestamp: new Date(),
+              comment: `Status updated to ${newStatus} by restaurant.`,
+              updatedBy: "restaurant",
+            },
+          },
+        },
+        { new: true }
+      )
+      .populate("userid", "-password")
+      .populate("deliverypersonid")
+      .populate({ path: "menuid", populate: { path: "restaurantid" } });
+
+    if (!updatedOrder) {
+      return res.status(404).json({ message: "Order not found" });
     }
-    catch(err){
-         res.status(500).json({message:"Server Error "+err.message})
+
+    // Scoped socket updates
+    if (req.io) {
+      // Notify customer room
+      req.io.to(`user_${updatedOrder.userid._id}`).emit("orderStatusChanged", updatedOrder);
+      req.io.to(`order_${orderid}`).emit("status:update", { orderId: orderid, status: newStatus });
+
+      // Delivery room
+      if (updatedOrder.deliverypersonid) {
+        req.io.to(`delivery_${updatedOrder.deliverypersonid._id}`).emit("deliveryOrderUpdate", updatedOrder);
+      }
+
+      // Legacy user orders update event
+      const userOrders = await orderSchema
+        .find({ userid: updatedOrder.userid._id })
+        .populate("userid menuid deliverypersonid")
+        .sort({ createdAt: -1 });
+      req.io.emit("updatedOrder", userOrders);
     }
-})
 
-//availability status changing
+    // Send transactional status update email
+    sendStatusUpdate(updatedOrder, updatedOrder.userid, newStatus);
 
-restRoute.patch("/availability/:id",validatetoken,async(req,res)=>{
-    let restaurantid = req.params.id;
- 
-    try{
-         await restSchema.findByIdAndUpdate(restaurantid,{ $set : req.body})
+    return res.status(200).json({ message: "Status Updated", order: updatedOrder });
+  } catch (err) {
+    return res.status(500).json({ message: "Server Error " + err.message });
+  }
+});
 
-         let result=await menuSchema.find().populate("restaurantid")
-          result.sort((a, b) => {
-          if (a.restaurantid.isactive && !b.restaurantid.isactive) {
-              return -1; 
-          }
-          if (!a.restaurantid.isactive && b.restaurantid.isactive) {
-              return 1; 
-          }
-          return 0; 
-        });
-        req.io.emit("foodsData", result);
+/**
+ * Restaurant Availability Toggle
+ */
+restRoute.patch("/availability/:id", authenticate, async (req, res) => {
+  const restaurantid = req.params.id;
 
+  try {
+    await restSchema.findByIdAndUpdate(restaurantid, { $set: req.body });
 
-        res.status(200).json({message:"Availability Status Updated !"})
+    const result = await menuSchema.find().populate("restaurantid");
+    if (req.io) {
+      req.io.emit("foodsData", result);
     }
-    catch(err){
-        res.status(500).json({message:err.message})
-    }
-})
 
+    return res.status(200).json({ message: "Availability Status Updated !" });
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+});
 
+// Error handling middleware for Multer
 restRoute.use((err, req, res, next) => {
   if (err instanceof multer.MulterError) {
-    // Multer-specific errors
     if (err.code === "LIMIT_FILE_SIZE") {
       return res.status(400).json({ message: "File too large! Max 15MB allowed." });
     }
     return res.status(400).json({ message: err.message });
   } else if (err) {
-    // Custom errors (like fileFilter)
     return res.status(400).json({ message: err.message });
   }
   next();

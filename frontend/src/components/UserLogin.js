@@ -1,131 +1,98 @@
-import React, { useState } from 'react'
-import axios from 'axios'
-import { Link, useNavigate } from 'react-router-dom'
-import { ToastContainer, toast } from 'react-toastify'
+import React, { useState } from "react";
+import api from "../config/api";
+import { Link, useNavigate } from "react-router-dom";
+import { ToastContainer, toast } from "react-toastify";
 
 export default function UserLogin() {
+  const navigate = useNavigate();
 
-   const navigate=useNavigate();
+  const [login, setLogin] = useState({
+    email: "",
+    password: "",
+  });
 
-    const [login,setLogin]=useState({
-        email:"",
-        password:""
-    })
+  const update = (event) => {
+    setLogin({ ...login, [event.target.name]: event.target.value });
+  };
 
-     const update=(event)=>{
-         setLogin({...login,[event.target.name] : event.target.value})
-    }
+  const send = (event) => {
+    event.preventDefault();
 
-    const send=(event)=>{
-
-         event.preventDefault();
-
-         axios.post("https://cravecart-5vz7.onrender.com/user/login",login)
-         .then((res)=>{ toast.success(res.data.message);
-           localStorage.setItem("token",res.data.token) ;
-           localStorage.setItem("id",res.data.id) ;
-           localStorage.setItem("role",res.data.role) 
-            setTimeout(()=>navigate("/"),1500)})
-         .catch((err)=>{ toast.error(err.response.data.message)})
- 
-    }
+    api
+      .post("/user/login", login)
+      .then((res) => {
+        toast.success(res.data.message || "Login Success!");
+        localStorage.setItem("token", res.data.token);
+        localStorage.setItem("id", res.data.id);
+        localStorage.setItem("role", res.data.role);
+        localStorage.setItem("name", res.data.name || res.data.email.split("@")[0]);
+        localStorage.setItem("email", res.data.email);
+        setTimeout(() => navigate("/"), 1000);
+      })
+      .catch((err) => {
+        toast.error(err.response?.data?.message || "Invalid credentials.");
+      });
+  };
 
   return (
-    <div className='login-page'>
-    <div className='container p-2 d-flex justify-content-center my-5'>
-       <form onSubmit={send} className='w-75 w-lg-50 p-3 border bg-light shadow-lg rounded-3'>
+    <div className="login-page">
+      <div className="container p-2 d-flex justify-content-center my-5">
+        <form onSubmit={send} className="w-100 p-4 border bg-white shadow-xl rounded-4" style={{ maxWidth: "460px" }}>
+          <div className="text-center mb-4">
+            <h3 className="fw-bold mb-1">Welcome Back</h3>
+            <p className="text-muted small">Log in to CraveCart to order your favorite meals</p>
+          </div>
 
-        <h2 className='p-2 text-center'>Login</h2>
-        <hr></hr>
-        <div class="mb-3">
-            <label class="form-label">Email</label>
-            <input type="email" class="form-control" placeholder='Ex: Sample@gmail.com' onChange={update} name='email' required/>
-           
-        </div>
+          <div className="mb-3">
+            <label className="form-label small fw-semibold">Email Address</label>
+            <input
+              type="email"
+              className="form-control rounded-3"
+              placeholder="name@example.com"
+              onChange={update}
+              name="email"
+              required
+            />
+          </div>
 
-       <div class="mb-3">
-            <label class="form-label">Password</label>
-            <input type="password" class="form-control" placeholder='****' onChange={update} name='password' required/>
-       </div>
- 
-        <button type="submit" class="btn btn-primary w-100">Submit</button>
+          <div className="mb-4">
+            <label className="form-label small fw-semibold">Password</label>
+            <input
+              type="password"
+              className="form-control rounded-3"
+              placeholder="••••••••"
+              onChange={update}
+              name="password"
+              required
+            />
+          </div>
 
-         <div className='d-flex justify-content-center my-3'><Link to="/user/signup" className='h6 text-center text-primary  text-decoration-none '>Don't Have an Account? Signin</Link></div>
+          <button type="submit" className="btn btn-primary-crave w-100 py-2 fs-6">
+            Log In to CraveCart
+          </button>
 
+          <div className="d-flex justify-content-center mt-3">
+            <Link to="/user/signup" className="small text-primary text-decoration-none fw-semibold">
+              Don't have an account? Sign Up
+            </Link>
+          </div>
+        </form>
 
-      </form>
-       <ToastContainer 
-    className="custom-toast"
-    autoClose={3000} 
-  />
+        <ToastContainer position="top-right" autoClose={3000} />
+      </div>
+
+      <style>{`
+        .login-page {
+          min-height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: linear-gradient(rgba(15, 23, 42, 0.6), rgba(15, 23, 42, 0.7)),
+                      url("https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1600&q=80")
+                      no-repeat center center;
+          background-size: cover;
+        }
+      `}</style>
     </div>
-    <style>{`
-  .login-page {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)),
-                url("https://images.unsplash.com/photo-1600891964599-f61ba0e24092?auto=format&fit=crop&w=1600&q=80")
-                no-repeat center center;
-    background-size: cover;
-  }
-
-  form {
-    max-width: 500px;
-    width: 100%;
-  }
-
-  /* Mobile */
-  @media (max-width: 480px) {
-    .login-page {
-      background-position: top center;   /* focus top of image */
-      background-size: cover;            /* still fills screen */
-    }
-  }
-
-  /* Tablet */
-  @media (min-width: 481px) and (max-width: 1024px) {
-    .login-page {
-      background-position: center center; /* balance */
-      background-size: cover;
-    }
-  }
-
-  /* Laptop & Desktop */
-  @media (min-width: 1025px) {
-    .login-page {
-      background-position: center center;
-      background-size: cover;
-    }
-  }
-
-  .custom-toast {
-      top: 80px !important;
-      left: 75% !important;
-      right: auto !important;
-      width: 320px !important;
-    }
-
-    /* Tablet */
-    @media (max-width: 1024px) {
-      .custom-toast {
-        left: 65% !important;
-        width: 280px !important;
-      }
-    }
-
-    /* Mobile */
-    @media (max-width: 600px) {
-      .custom-toast {
-        left: 50% !important;
-        transform: translateX(-50%) !important;
-        width: 90% !important;
-        max-width: 300px !important;
-      }
-    }
-`}</style>
-
-    </div>
-  )
+  );
 }

@@ -1,46 +1,62 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { toast, ToastContainer } from "react-toastify";
-import axios from "axios";
+import api from "../config/api";
 import CartCard from "../components/CartCard";
+import AIChatWidget from "../components/AIChatWidget";
 
 export default function Cart() {
+  const navigate = useNavigate();
   const [cartItems, setCartItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Address and payment state
+  const [address, setAddress] = useState(localStorage.getItem("address") || "");
+  const [paymentMethod, setPaymentMethod] = useState("COD");
+
+  // Coupon state
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [availableCoupons, setAvailableCoupons] = useState([]);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+
+  const userId = localStorage.getItem("id");
+
+  const loadCart = () => {
+    if (!userId) return;
+    api
+      .get(`/user/cartdisplay/${userId}`)
+      .then((res) => {
+        setCartItems(res.data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        toast.error(err.response?.data?.message || "Failed to load cart.");
+        setLoading(false);
+      });
+  };
 
   useEffect(() => {
-    axios
-      .get(
-        "https://cravecart-5vz7.onrender.com/user/cartdisplay/" + localStorage.getItem("id"),
-        {
-          headers: { Authorization: "Bearer " + localStorage.getItem("token") },
-        }
-      )
-      .then((res) => setCartItems(res.data))
-      .catch((err) => toast.error(err.response.data.message));
+    loadCart();
+
+    // Fetch active coupons
+    api
+      .get("/coupons")
+      .then((res) => setAvailableCoupons(res.data))
+      .catch(() => {});
   }, []);
 
   const removeitem = (id) => {
-    axios
-      .delete("https://cravecart-5vz7.onrender.com/user/cartdelete/" + id, {
-        headers: { Authorization: "Bearer " + localStorage.getItem("token") },
-      })
+    api
+      .delete(`/user/cartdelete/${id}`)
       .then((res) => {
         toast.success(res.data.message);
-        axios
-          .get(
-            "https://cravecart-5vz7.onrender.com/user/cartdisplay/" +
-              localStorage.getItem("id"),
-            {
-              headers: {
-                Authorization: "Bearer " + localStorage.getItem("token"),
-              },
-            }
-          )
-          .then((res) => setCartItems(res.data))
-          .catch((err) => toast.error(err.response.data.message));
+        loadCart();
       })
-      .catch((err) => toast.error(err.response.data.message));
+      .catch((err) => toast.error(err.response?.data?.message || "Error removing item"));
   };
 
   const handlequantityupdate = (id, newquantity) => {
@@ -50,169 +66,377 @@ export default function Cart() {
     setCartItems(updateditems);
   };
 
-  const totalPrice = cartItems.reduce(
-    (total, item) => total + item.price * (item.quantity || 1),
+  const subtotal = cartItems.reduce(
+    (total, item) => total + (item.price || item.menuid?.price || 0) * (item.quantity || 1),
     0
   );
 
-//order proceedings
-const [address, setAddress] = useState("");
+  const deliveryFee = 60;
+  const grandTotal = Math.max(0, subtotal + deliveryFee - discountAmount);
 
-  const [paymentMethod, setPaymentMethod] = useState("COD");
+  // Apply Coupon
+  const handleApplyCoupon = (codeToApply) => {
+    const code = (codeToApply || couponCode).trim().toUpperCase();
+    if (!code) return;
 
-  const handleChange = (e) => {
-    setAddress(e.target.value);
+    api
+      .post("/coupons/apply", { code, subtotal })
+      .then((res) => {
+        if (res.data.valid) {
+          setAppliedCoupon(code);
+          setDiscountAmount(res.data.discountAmount);
+          toast.success(`Coupon ${code} applied! Saved ₹${res.data.discountAmount}`);
+        }
+      })
+      .catch((err) => {
+        toast.error(err.response?.data?.message || "Invalid coupon code");
+      });
   };
 
-  const order =  function(e){
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setDiscountAmount(0);
+    setCouponCode("");
+  };
+
+  // Dynamically load Razorpay SDK
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      if (window.Razorpay) {
+        resolve(true);
+        return;
+      }
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  // Place Order handler with Razorpay Test Mode integration
+  const handleCheckout = async (e) => {
     e.preventDefault();
-    
-    if(window.confirm("Are You Placing the order ?")){
 
-      cartItems.map((item)=>
-      {
-                  let orderdetails = {
-              userid:localStorage.getItem("id"),
-              menuid:item.menuid._id,
-              price:item.price,
-              quantity:item.quantity,
-              paymentmethod:paymentMethod,
-              address:address
+    if (!address.trim()) {
+      toast.error("Please enter a valid delivery address.");
+      return;
+    }
+
+    if (cartItems.length === 0) {
+      toast.error("Your cart is empty.");
+      return;
+    }
+
+    setIsProcessingPayment(true);
+
+    try {
+      if (paymentMethod === "Online") {
+        // 1. Initialize Razorpay Gateway Order
+        const isScriptLoaded = await loadRazorpayScript();
+
+        const gatewayOrderRes = await api.post("/payment/create-order", {
+          items: cartItems.map((c) => ({
+            menuid: c.menuid?._id || c.menuid,
+            name: c.menuid?.name || "Dish",
+            price: c.price,
+            quantity: c.quantity || 1,
+          })),
+          couponCode: appliedCoupon,
+        });
+
+        const gatewayData = gatewayOrderRes.data;
+
+        if (isScriptLoaded && window.Razorpay && !gatewayData.isMock) {
+          const options = {
+            key: gatewayData.keyId,
+            amount: gatewayData.amount,
+            currency: "INR",
+            name: "CraveCart Food Delivery",
+            description: `Payment for ${cartItems.length} items (Test Mode)`,
+            order_id: gatewayData.orderId,
+            prefill: {
+              name: localStorage.getItem("name") || "Foodie",
+              email: localStorage.getItem("email") || "foodie@cravecart.local",
+            },
+            theme: { color: "#FF5200" },
+            handler: async function (response) {
+              await completeOrderPlacement({
+                paymentStatus: "Paid",
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
+              });
+            },
+            modal: {
+              ondismiss: function () {
+                setIsProcessingPayment(false);
+                toast.info("Payment cancelled.");
+              },
+            },
+          };
+
+          const rzp = new window.Razorpay(options);
+          rzp.open();
+        } else {
+          // Sandbox test simulator fallback
+          const confirmPayment = window.confirm(
+            `[RAZORPAY TEST SANDBOX]\nSimulate successful payment of ₹${grandTotal}?\n(Click OK for Success, Cancel to abort)`
+          );
+          if (confirmPayment) {
+            await completeOrderPlacement({
+              paymentStatus: "Paid",
+              razorpayOrderId: gatewayData.orderId,
+              razorpayPaymentId: `pay_test_${Date.now()}`,
+              razorpaySignature: "mock_signature_valid",
+            });
+          } else {
+            setIsProcessingPayment(false);
+          }
         }
+      } else {
+        // Cash on Delivery
+        await completeOrderPlacement({ paymentStatus: "Pending" });
+      }
+    } catch (err) {
+      setIsProcessingPayment(false);
+      toast.error(err.response?.data?.message || "Checkout failed. Please try again.");
+    }
+  };
 
-        axios.post("https://cravecart-5vz7.onrender.com/user/order/"+localStorage.getItem("id"),orderdetails,
-                {headers:{Authorization:"Bearer "+localStorage.getItem("token")}})
-        .then((res)=>console.log(res.data.message))
-        .catch((err)=>toast.error(err.response.data.message));
+  const completeOrderPlacement = async (paymentDetails = {}) => {
+    try {
+      const orderPayload = {
+        userid: userId,
+        address: address,
+        paymentmethod: paymentMethod,
+        paymentStatus: paymentDetails.paymentStatus || "Pending",
+        razorpayOrderId: paymentDetails.razorpayOrderId || null,
+        razorpayPaymentId: paymentDetails.razorpayPaymentId || null,
+        razorpaySignature: paymentDetails.razorpaySignature || null,
+        couponCode: appliedCoupon,
+        price: subtotal,
+        quantity: 1,
+        items: cartItems.map((c) => ({
+          menuid: c.menuid?._id || c.menuid,
+          name: c.menuid?.name,
+          price: c.price,
+          quantity: c.quantity || 1,
+          restaurantid: c.menuid?.restaurantid?._id,
+        })),
+      };
 
-      })
-      toast.success("Thank you for the Order ! Your Order will recieve Soon ")
-    
-      axios.delete("https://cravecart-5vz7.onrender.com/user/cartrefresh/"+localStorage.getItem("id"), {headers:{Authorization:"Bearer "+localStorage.getItem("token")}})
-      .then((res)=>toast.success(res.data.message)).catch((err)=>toast.error(err.response.data.message));
-      setCartItems([])
-  
+      const orderRes = await api.post(`/user/order/${userId}`, orderPayload);
+
+      // Verify payment with server if online
+      if (paymentDetails.razorpayPaymentId) {
+        await api.post("/payment/verify", {
+          razorpayOrderId: paymentDetails.razorpayOrderId,
+          razorpayPaymentId: paymentDetails.razorpayPaymentId,
+          razorpaySignature: paymentDetails.razorpaySignature,
+          orderId: orderRes.data.orderId,
+        });
+      }
+
+      // Clear cart
+      await api.delete(`/user/cartrefresh/${userId}`);
+      setCartItems([]);
+      setIsProcessingPayment(false);
+
+      toast.success("Order Placed Successfully! Redirecting to live tracking...");
+      setTimeout(() => {
+        navigate(`/orders/track/${orderRes.data.orderId}`);
+      }, 1200);
+    } catch (err) {
+      setIsProcessingPayment(false);
+      toast.error(err.response?.data?.message || "Order completion error");
     }
   };
 
   return (
-    <div>
-      <Navbar></Navbar>
+    <div className="bg-light min-vh-100 d-flex flex-column">
+      <Navbar />
 
-      <div className="container my-4">
-        <h3 className="mb-4 d-flex align-items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="currentColor" class="bi bi-bag-fill" viewBox="0 0 16 16">
-  <path d="M8 1a2.5 2.5 0 0 1 2.5 2.5V4h-5v-.5A2.5 2.5 0 0 1 8 1m3.5 3v-.5a3.5 3.5 0 1 0-7 0V4H1v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V4z"/>
-</svg> Your Cart</h3>
-        <div className="row">
-          {cartItems.length > 0 ? (
-            cartItems.map((item, index) => (
-              <div className="col-md-4 mb-4" key={index}>
-                <CartCard
-                  item={item}
-                  removeitem={removeitem}
-                  handlequantityupdate={handlequantityupdate}
-                  key={item._id}
-                ></CartCard>
-              </div>
-            ))
-          ) : (
-            <div className="col-12 text-center">
-              <p className="text-muted">Your cart is empty.</p>
+      <div className="container my-4 flex-grow-1">
+        <h3 className="mb-4 fw-bold d-flex align-items-center gap-2">
+          <span>🛒</span> Review Your Cart & Checkout
+        </h3>
+
+        {loading ? (
+          <div className="text-center py-5">
+            <div className="spinner-border text-primary" role="status" />
+            <p className="mt-2 text-muted">Loading your items...</p>
+          </div>
+        ) : cartItems.length === 0 ? (
+          <div className="card shadow-sm border-0 rounded-4 text-center py-5 p-4">
+            <span style={{ fontSize: "54px" }}>🍽️</span>
+            <h4 className="mt-3 fw-bold">Your cart is empty</h4>
+            <p className="text-muted">Good food is always just a few clicks away!</p>
+            <div>
+              <button
+                className="btn btn-primary-crave px-4 py-2 mt-2"
+                onClick={() => navigate("/foods")}
+              >
+                Browse Menu
+              </button>
             </div>
-          )}
-        </div>
-        {cartItems.length > 0 && (
-          <div>
-            <div className="card p-3 mt-4 shadow-sm">
-              <h5 className="mb-3">Delivery Details</h5>
-              <form onSubmit={order}>
-                {/* Address Fields */}
-                <div className="mb-2">
-                  <label className="form-label"> Address</label>
+          </div>
+        ) : (
+          <div className="row g-4">
+            {/* Cart Items List */}
+            <div className="col-lg-7">
+              <div className="card shadow-sm border-0 rounded-4 p-3 mb-4 bg-white">
+                <h5 className="fw-bold mb-3">Order Items ({cartItems.length})</h5>
+                <div className="d-flex flex-column gap-3">
+                  {cartItems.map((item, index) => (
+                    <CartCard
+                      key={item._id || index}
+                      item={item}
+                      removeitem={removeitem}
+                      handlequantityupdate={handlequantityupdate}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Delivery Address Form */}
+              <div className="card shadow-sm border-0 rounded-4 p-4 bg-white">
+                <h5 className="fw-bold mb-3">📍 Delivery Address</h5>
+                <textarea
+                  className="form-control rounded-3"
+                  rows="3"
+                  placeholder="Enter complete delivery street address, house/flat number, landmarks..."
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Bill Summary & Payment */}
+            <div className="col-lg-5">
+              {/* Coupons Widget */}
+              <div className="card shadow-sm border-0 rounded-4 p-3 mb-4 bg-white">
+                <h6 className="fw-bold mb-2">🏷️ Apply Coupon</h6>
+                <div className="input-group mb-2">
                   <input
                     type="text"
-                    className="form-control"
-                    name="street"
-                    value={address.street}
-                    onChange={handleChange}
-                    required
+                    className="form-control text-uppercase font-monospace"
+                    placeholder="Enter Coupon (e.g. WELCOME50)"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value)}
+                    disabled={Boolean(appliedCoupon)}
                   />
+                  {appliedCoupon ? (
+                    <button className="btn btn-outline-danger" onClick={handleRemoveCoupon}>
+                      Remove
+                    </button>
+                  ) : (
+                    <button
+                      className="btn btn-primary"
+                      onClick={() => handleApplyCoupon()}
+                      disabled={!couponCode.trim()}
+                    >
+                      Apply
+                    </button>
+                  )}
                 </div>
 
-                {/* Payment Method */}
-                <h6 className="mb-2">Payment Method</h6>
-                <div className="form-check">
-                  <input
-                    className="form-check-input"
-                    type="radio"
-                    name="paymentMethod"
-                    id="cod"
-                    value="COD"
-                    checked={paymentMethod === "COD"}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                  />
-                  <label className="form-check-label" htmlFor="cod">
-                    Cash on Delivery (COD)
-                  </label>
+                {/* Available Coupon Chips */}
+                {availableCoupons.length > 0 && !appliedCoupon && (
+                  <div className="d-flex flex-wrap gap-2 mt-2">
+                    {availableCoupons.map((c) => (
+                      <span
+                        key={c.code}
+                        className="badge bg-light text-primary border p-2 cursor-pointer"
+                        style={{ cursor: "pointer" }}
+                        onClick={() => handleApplyCoupon(c.code)}
+                      >
+                        ⚡ {c.code} ({c.discountValue}% OFF)
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Bill Details */}
+              <div className="card shadow-sm border-0 rounded-4 p-4 bg-white mb-4">
+                <h5 className="fw-bold mb-3">Bill Details</h5>
+                <div className="d-flex justify-content-between mb-2">
+                  <span className="text-muted">Item Subtotal</span>
+                  <span className="fw-semibold">₹{subtotal}</span>
                 </div>
-                <div className="form-check mb-3">
+                <div className="d-flex justify-content-between mb-2">
+                  <span className="text-muted">Delivery Charges</span>
+                  <span className="fw-semibold">₹{deliveryFee}</span>
+                </div>
+                {discountAmount > 0 && (
+                  <div className="d-flex justify-content-between mb-2 text-success">
+                    <span>Coupon Discount ({appliedCoupon})</span>
+                    <span className="fw-bold">-₹{discountAmount}</span>
+                  </div>
+                )}
+                <hr />
+                <div className="d-flex justify-content-between align-items-center mb-4">
+                  <span className="fs-5 fw-bold">To Pay</span>
+                  <span className="fs-4 fw-bold text-primary">₹{grandTotal}</span>
+                </div>
+
+                {/* Payment Selection */}
+                <h6 className="fw-bold mb-2">Choose Payment Option</h6>
+                <div className="form-check p-3 border rounded-3 mb-2 d-flex align-items-center gap-2">
                   <input
-                    className="form-check-input"
+                    className="form-check-input ms-0"
                     type="radio"
                     name="paymentMethod"
-                    id="online"
+                    id="onlinePay"
                     value="Online"
                     checked={paymentMethod === "Online"}
                     onChange={(e) => setPaymentMethod(e.target.value)}
                   />
-                  <label className="form-check-label" htmlFor="online">
-                    Online Payment
+                  <label className="form-check-label w-100" htmlFor="onlinePay">
+                    <strong>Razorpay Checkout (UPI, Cards, Net Banking)</strong>
+                    <span className="badge bg-success ms-2">Test Mode Active</span>
                   </label>
                 </div>
-                <button className="btn btn-success form-control" type="submit" >Proceed to CheckOut</button>
-              </form>
-            </div>
-            <div className="mt-4 p-3 border rounded shadow-sm bg-light text-end">
-              <h4>Total: ₹{totalPrice}</h4>
-              <p className="text-muted">
-                <b>+</b> ₹60 Delivery Charges
-              </p>
-              
+                <div className="form-check p-3 border rounded-3 mb-4 d-flex align-items-center gap-2">
+                  <input
+                    className="form-check-input ms-0"
+                    type="radio"
+                    name="paymentMethod"
+                    id="codPay"
+                    value="COD"
+                    checked={paymentMethod === "COD"}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                  />
+                  <label className="form-check-label w-100" htmlFor="codPay">
+                    <strong>Cash on Delivery (COD)</strong>
+                  </label>
+                </div>
+
+                <button
+                  className="btn btn-primary-crave w-100 py-3 fs-5"
+                  onClick={handleCheckout}
+                  disabled={isProcessingPayment}
+                >
+                  {isProcessingPayment ? (
+                    <span>
+                      <span className="spinner-border spinner-border-sm me-2" />
+                      Processing Order...
+                    </span>
+                  ) : (
+                    `Pay ₹${grandTotal} & Place Order`
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         )}
       </div>
-     <ToastContainer 
-    className="custom-toast"
-    autoClose={3000} limit={3}
-  />
-      <Footer></Footer>
-      <style>{`
-    .custom-toast {
-      top: 80px !important;
-      left: 75% !important;
-      right: auto !important;
-      width: 320px !important;
-    }
 
-    /* Tablet */
-    @media (max-width: 1024px) {
-      .custom-toast {
-        left: 65% !important;
-        width: 280px !important;
-      }
-    }
-
-    /* Mobile */
-    @media (max-width: 600px) {
-      .custom-toast {
-        left: 50% !important;
-        transform: translateX(-50%) !important;
-        width: 90% !important;
-        max-width: 300px !important;
-      }
-    }
-  `}</style>
+      <AIChatWidget />
+      <ToastContainer position="top-right" autoClose={3000} />
+      <Footer />
     </div>
   );
 }

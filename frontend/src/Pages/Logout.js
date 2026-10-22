@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react'
-import { useNavigate } from 'react-router-dom';
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function Logout() {
   const navigate = useNavigate();
@@ -8,10 +8,10 @@ export default function Logout() {
     localStorage.removeItem("id");
     localStorage.removeItem("token");
     localStorage.removeItem("role");
-
+    localStorage.removeItem("name");
+    localStorage.removeItem("email");
     navigate("/");
   }, [navigate]);
 
-  return null; 
+  return null;
 }
-

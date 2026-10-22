@@ -1,11 +1,10 @@
-import React,{useState} from 'react'
-import axios from 'axios'
-import {  useNavigate } from 'react-router-dom';
-import { ToastContainer, toast } from 'react-toastify'
+import React, { useState } from 'react';
+import api from '../config/api';
+import { useNavigate } from 'react-router-dom';
+import { ToastContainer, toast } from 'react-toastify';
 
 export default function RestaurantSignin() {
-
-    const navigate=useNavigate();
+  const navigate = useNavigate();
 
     const [user,setUser]=useState({
         name:"",
@@ -81,9 +80,12 @@ export default function RestaurantSignin() {
            formdata.append("address",user.address)
 
 
-           axios.post("https://cravecart-5vz7.onrender.com/restaurant/signin",formdata)
-           .then((res)=> toast.success(res.data.message))
-           .catch((err)=>{ toast.error(err.response.data.message)})
+           api.post("/restaurant/signin", formdata, { headers: { "Content-Type": "multipart/form-data" } })
+           .then((res) => {
+             toast.success(res.data.message || "Registration success!");
+             setTimeout(() => navigate("/restaurant/view"), 1500);
+           })
+           .catch((err) => { toast.error(err.response?.data?.message || "Registration failed"); });
     }
 
   return (

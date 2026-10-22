@@ -1,295 +1,526 @@
-import axios from "axios";
 import React, { useEffect, useState } from "react";
-import { toast,ToastContainer } from "react-toastify";
+import api, { getImageUrl } from "../config/api";
+import { toast, ToastContainer } from "react-toastify";
+import { useNavigate } from "react-router-dom";
 
 export default function AdminDashboard() {
-  const [orders, setOrder] = useState([]);
-  const [menus, setMenu] = useState([]);
-  const [users, setUser] = useState([]);
-  const [restaurants, setRestaurant] = useState([]);
-  const [deliveryPersons, setDeliveryPerson] = useState([]);
+  const navigate = useNavigate();
+  const [data, setData] = useState({
+    user: [],
+    restaurant: [],
+    deliveryman: [],
+    menu: [],
+    orders: [],
+    coupons: [],
+    stats: {},
+  });
+  const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    axios
-      .get("https://cravecart-5vz7.onrender.com/admin/dashboard", {
-        headers: { Authorization: "Bearer " + localStorage.getItem("token") },
-      })
+  // New coupon state
+  const [newCoupon, setNewCoupon] = useState({
+    code: "",
+    title: "",
+    discountType: "percentage",
+    discountValue: 20,
+    maxDiscount: 100,
+    minOrderAmount: 199,
+  });
+
+  const loadDashboard = () => {
+    api
+      .get("/admin/dashboard")
       .then((res) => {
-        setOrder(res.data.orders || []);
-        setUser(res.data.user || []);
-        setMenu(res.data.menu || []);
-        setRestaurant(res.data.restaurant || []);
-        setDeliveryPerson(res.data.deliveryman || []);
+        setData(res.data);
         setLoading(false);
       })
       .catch((err) => {
-        toast.error(err.response?.data?.message || "Error fetching data");
+        toast.error(err.response?.data?.message || "Failed to load dashboard data");
         setLoading(false);
       });
+  };
+
+  useEffect(() => {
+    loadDashboard();
   }, []);
 
-  const renderTable = (columns, data) => (
-    <div className="table-responsive mt-3 animate-table">
-      <table className="table table-striped table-hover align-middle shadow-sm bg-transparent rounded">
-        <thead className="table-secondary">
-          <tr>
-            {columns.map((col) => (
-              <th key={col}>{col}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {(data || []).map((row, idx) => (
-            <tr key={idx}>
-              {columns.map((col) => {
-                const key = col.toLowerCase();
-                let value = "-";
+  const handleToggleRestaurant = (id) => {
+    api
+      .patch(`/admin/restaurant/${id}/toggle`)
+      .then((res) => {
+        toast.success(res.data.message);
+        loadDashboard();
+      })
+      .catch((err) => toast.error("Error: " + (err.response?.data?.message || err.message)));
+  };
 
-                // Orders table
-                if (row._id) {
-                  switch (key) {
-                    case "id":
-                      value = row._id;
-                      break;
-                    case "user":
-                      value = row.userid?.name || "-";
-                      break;
-                    case "menu":
-                      value = row.menuid?.name || "-";
-                      break;
-                    case "deliveryperson":
-                      value = row.deliverypersonid?.name || "-";
-                      break;
-                    case "price":
-                      value = row.price || "-";
-                      break;
-                    case "quantity":
-                      value = row.quantity || "-";
-                      break;
-                    case "status":
-                      value = row.status || "-";
-                      break;
-                    case "paymentmethod":
-                      value = row.paymentmethod || "-";
-                      break;
-                    case "address":
-                      value = row.address || "-";
-                      break;
-                    case "createdat":
-                      value = row.createdAt ? new Date(row.createdAt).toLocaleString() : "-";
-                      break;
-                    case "updatedat":
-                      value = row.updatedAt ? new Date(row.updatedAt).toLocaleString() : "-";
-                      break;
-                    default:
-                      value = row[key] || "-";
-                  }
-                } else {
-                  // Other schemas
-                  value = row[key] || row._id || "-";
-                }
+  const handleCreateCoupon = (e) => {
+    e.preventDefault();
+    api
+      .post("/coupons", newCoupon)
+      .then((res) => {
+        toast.success("Coupon created successfully!");
+        setNewCoupon({
+          code: "",
+          title: "",
+          discountType: "percentage",
+          discountValue: 20,
+          maxDiscount: 100,
+          minOrderAmount: 199,
+        });
+        loadDashboard();
+      })
+      .catch((err) => toast.error(err.response?.data?.message || "Failed to create coupon"));
+  };
 
-                return <td key={col}>{value}</td>;
-              })}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-
-  if (loading) return <h2 className="text-center text-white mt-5">Loading Dashboard...</h2>;
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    localStorage.removeItem("id");
+    navigate("/admin/login");
+  };
 
   return (
-    <div className="dashboard-container">
-      <div className="container py-5">
-        <h1
-          className="text-center display-5 mb-5 fw-bold text-white"
-          style={{ fontFamily: "'Poppins', sans-serif" }}
-        >
-           Admin Dashboard
-        </h1>
+    <div className="bg-light min-vh-100">
+      {/* Admin Top Header */}
+      <nav className="navbar navbar-dark bg-dark px-4 py-3 shadow-sm sticky-top">
+        <div className="container-fluid d-flex justify-content-between align-items-center">
+          <div className="d-flex align-items-center gap-2">
+            <span className="badge bg-danger rounded-circle p-2 fs-6">🛡️</span>
+            <span className="navbar-brand mb-0 h1 fw-bold fs-4">
+              CraveCart <span className="text-warning">Command Center</span>
+            </span>
+          </div>
+          <div className="d-flex align-items-center gap-3">
+            <span className="text-light small d-none d-sm-inline">
+              Superadmin Portal
+            </span>
+            <button className="btn btn-sm btn-outline-danger rounded-pill px-3" onClick={handleLogout}>
+              Logout
+            </button>
+          </div>
+        </div>
+      </nav>
 
-        {/* Orders */}
-        <details className="mb-4 dashboard-section">
-          <summary>
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-cart-check-fill me-2" viewBox="0 0 16 16">
-              <path d="M.5 1a.5.5 0 0 0 0 1h1.11l.401 1.607 1.498 7.985A.5.5 0 0 0 4 12h1a2 2 0 1 0 0 4 2 2 0 0 0 0-4h7a2 2 0 1 0 0 4 2 2 0 0 0 0-4h1a.5.5 0 0 0 .491-.408l1.5-8A.5.5 0 0 0 14.5 3H2.89l-.405-1.621A.5.5 0 0 0 2 1zM6 14a1 1 0 1 1-2 0 1 1 0 0 1 2 0m7 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0m-1.646-7.646-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L8 8.293l2.646-2.647a.5.5 0 0 1 .708.708"/>
-            </svg>
-            Orders
-             </summary>
-          {renderTable(
-            [
-              "ID",
-              "User",
-              "Menu",
-              "Price",
-              "Quantity",
-              "Status",
-              "PaymentMethod",
-              "Address",
-              "DeliveryPerson",
-              "CreatedAt",
-              "UpdatedAt",
-            ],
-            orders
-          )}
-        </details>
+      <div className="container-fluid py-4 px-lg-5">
+        {loading ? (
+          <div className="text-center py-5">
+            <div className="spinner-border text-primary" role="status" />
+            <p className="mt-2 text-muted">Aggregating platform intelligence...</p>
+          </div>
+        ) : (
+          <>
+            {/* KPI Metrics Summary Cards */}
+            <div className="row g-3 mb-4">
+              <div className="col-6 col-md-4 col-xl-2">
+                <div className="card shadow-sm border-0 rounded-4 p-3 bg-white h-100">
+                  <span className="text-muted small">Total Orders</span>
+                  <h3 className="fw-bold mt-1 text-primary">{data.stats?.totalOrders || data.orders?.length || 0}</h3>
+                  <small className="text-success fw-semibold">Platform Lifetime</small>
+                </div>
+              </div>
 
-        {/* Menus */}
-        <details className="mb-4 dashboard-section">
-          <summary>
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-fork-knife me-2" viewBox="0 0 16 16">
-              <path d="M13 .5c0-.276-.226-.506-.498-.465-1.703.257-2.94 2.012-3 8.462a.5.5 0 0 0 .498.5c.56.01 1 .13 1 1.003v5.5a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5zM4.25 0a.25.25 0 0 1 .25.25v5.122a.128.128 0 0 0 .256.006l.233-5.14A.25.25 0 0 1 5.24 0h.522a.25.25 0 0 1 .25.238l.233 5.14a.128.128 0 0 0 .256-.006V.25A.25.25 0 0 1 6.75 0h.29a.5.5 0 0 1 .498.458l.423 5.07a1.69 1.69 0 0 1-1.059 1.711l-.053.022a.92.92 0 0 0-.58.884L6.47 15a.971.971 0 1 1-1.942 0l.202-6.855a.92.92 0 0 0-.58-.884l-.053-.022a1.69 1.69 0 0 1-1.059-1.712L3.462.458A.5.5 0 0 1 3.96 0z"/>
-            </svg>
-             Menus</summary>
-          {renderTable(
-            ["ID", "Name", "Description", "Price", "Restaurant"],
-            (menus || []).map((m) => ({
-              _id: m._id,
-              name: m.name,
-              description: m.description,
-              price: m.price,
-              restaurant: m.restaurantid?.name || "-",
-            }))
-          )}
-        </details>
+              <div className="col-6 col-md-4 col-xl-2">
+                <div className="card shadow-sm border-0 rounded-4 p-3 bg-white h-100">
+                  <span className="text-muted small">Gross Revenue</span>
+                  <h3 className="fw-bold mt-1 text-success">₹{data.stats?.totalRevenue || 0}</h3>
+                  <small className="text-muted">Settled GMV</small>
+                </div>
+              </div>
 
-        {/* Restaurants */}
-        <details className="mb-4 dashboard-section">
-          <summary>
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-house-fill me-2" viewBox="0 0 16 16">
-            <path d="M8.707 1.5a1 1 0 0 0-1.414 0L.646 8.146a.5.5 0 0 0 .708.708L8 2.207l6.646 6.647a.5.5 0 0 0 .708-.708L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293z"/>
-            <path d="m8 3.293 6 6V13.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 13.5V9.293z"/>
-          </svg>
-             Restaurants</summary>
-          {renderTable(
-            ["ID", "Name", "Email", "Phonenumber", "Address", "City", "Pincode", "IsActive"],
-            (restaurants || []).map((r) => ({
-      _id: r._id,
-      name: r.name,
-      email: r.email,
-      phonenumber: r.phonenumber,
-      address: r.address,
-      city: r.city,
-      pincode: r.pincode,
-      isactive: r.isactive ? "Open" : "Closed", // <-- updated here
-    }))
-          )}
-        </details>
+              <div className="col-6 col-md-4 col-xl-2">
+                <div className="card shadow-sm border-0 rounded-4 p-3 bg-white h-100">
+                  <span className="text-muted small">Restaurants</span>
+                  <h3 className="fw-bold mt-1 text-dark">{data.stats?.totalRestaurants || data.restaurant?.length || 0}</h3>
+                  <small className="text-muted">Partner Kitchens</small>
+                </div>
+              </div>
 
-        {/* Users */}
-        <details className="mb-4 dashboard-section">
-          <summary><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-people-fill me-2" viewBox="0 0 16 16">
-            <path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6m-5.784 6A2.24 2.24 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.3 6.3 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1zM4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5"/>
-          </svg> Users</summary>
-          {renderTable(
-            ["ID", "Name", "Email", "PhoneNumber", "Address", "City", "Pincode"],
-            users
-          )}
-        </details>
+              <div className="col-6 col-md-4 col-xl-2">
+                <div className="card shadow-sm border-0 rounded-4 p-3 bg-white h-100">
+                  <span className="text-muted small">Riders</span>
+                  <h3 className="fw-bold mt-1 text-info">{data.stats?.totalDeliveryPartners || data.deliveryman?.length || 0}</h3>
+                  <small className="text-muted">Active Fleet</small>
+                </div>
+              </div>
 
-        {/* Delivery Persons */}
-        <details className="mb-4 dashboard-section">
-          <summary><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-truck me-2" viewBox="0 0 16 16">
-          <path d="M0 3.5A1.5 1.5 0 0 1 1.5 2h9A1.5 1.5 0 0 1 12 3.5V5h1.02a1.5 1.5 0 0 1 1.17.563l1.481 1.85a1.5 1.5 0 0 1 .329.938V10.5a1.5 1.5 0 0 1-1.5 1.5H14a2 2 0 1 1-4 0H5a2 2 0 1 1-3.998-.085A1.5 1.5 0 0 1 0 10.5zm1.294 7.456A2 2 0 0 1 4.732 11h5.536a2 2 0 0 1 .732-.732V3.5a.5.5 0 0 0-.5-.5h-9a.5.5 0 0 0-.5.5v7a.5.5 0 0 0 .294.456M12 10a2 2 0 0 1 1.732 1h.768a.5.5 0 0 0 .5-.5V8.35a.5.5 0 0 0-.11-.312l-1.48-1.85A.5.5 0 0 0 13.02 6H12zm-9 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2m9 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2"/>
-        </svg> Delivery Persons</summary>
-          {renderTable(
-            ["ID", "Name", "Email", "PhoneNumber", "Address"],
-            deliveryPersons
-          )}
-        </details>
+              <div className="col-6 col-md-4 col-xl-2">
+                <div className="card shadow-sm border-0 rounded-4 p-3 bg-white h-100">
+                  <span className="text-muted small">Registered Users</span>
+                  <h3 className="fw-bold mt-1 text-dark">{data.stats?.totalUsers || data.user?.length || 0}</h3>
+                  <small className="text-muted">Foodies</small>
+                </div>
+              </div>
+
+              <div className="col-6 col-md-4 col-xl-2">
+                <div className="card shadow-sm border-0 rounded-4 p-3 bg-white h-100">
+                  <span className="text-muted small">Menu Items</span>
+                  <h3 className="fw-bold mt-1 text-warning">{data.menu?.length || 0}</h3>
+                  <small className="text-muted">Published Dishes</small>
+                </div>
+              </div>
+            </div>
+
+            {/* Navigation Tabs */}
+            <div className="card shadow-sm border-0 rounded-4 p-2 mb-4 bg-white">
+              <div className="d-flex flex-wrap gap-2">
+                {["overview", "restaurants", "orders", "coupons", "delivery", "users"].map((tab) => (
+                  <button
+                    key={tab}
+                    className={`btn btn-sm rounded-pill px-4 text-capitalize fw-semibold ${
+                      activeTab === tab ? "btn-primary" : "btn-light"
+                    }`}
+                    onClick={() => setActiveTab(tab)}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Tab Contents */}
+            {activeTab === "overview" && (
+              <div className="row g-4">
+                <div className="col-lg-7">
+                  <div className="card shadow-sm border-0 rounded-4 p-4 bg-white h-100">
+                    <h5 className="fw-bold mb-3">Live Order Feed</h5>
+                    <div className="table-responsive">
+                      <table className="table table-hover align-middle">
+                        <thead className="table-light">
+                          <tr>
+                            <th>Order ID</th>
+                            <th>Dish</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Payment</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(data.orders || []).slice(0, 8).map((order) => (
+                            <tr key={order._id}>
+                              <td className="fw-bold">#{order._id.slice(-6).toUpperCase()}</td>
+                              <td>{order.menuid?.name || (order.items && order.items[0]?.name) || "Dish"}</td>
+                              <td className="fw-bold">₹{order.totalAmount || order.price}</td>
+                              <td>
+                                <span className={`badge ${order.status === "Delivered" ? "bg-success" : "bg-warning text-dark"} rounded-pill`}>
+                                  {order.status}
+                                </span>
+                              </td>
+                              <td>{order.paymentmethod}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="col-lg-5">
+                  <div className="card shadow-sm border-0 rounded-4 p-4 bg-white h-100">
+                    <h5 className="fw-bold mb-3">Restaurant Verification Queue</h5>
+                    <div className="d-flex flex-column gap-3">
+                      {(data.restaurant || []).slice(0, 6).map((r) => (
+                        <div key={r._id} className="d-flex justify-content-between align-items-center p-2 border rounded-3">
+                          <div className="d-flex align-items-center gap-2">
+                            <img
+                              src={getImageUrl(r.image)}
+                              alt={r.name}
+                              className="rounded-3"
+                              style={{ width: "42px", height: "42px", objectFit: "cover" }}
+                            />
+                            <div>
+                              <strong className="d-block text-truncate" style={{ maxWidth: "150px" }}>{r.name}</strong>
+                              <small className="text-muted">{r.city || "Bangalore"}</small>
+                            </div>
+                          </div>
+                          <button
+                            className={`btn btn-sm rounded-pill px-3 ${r.isactive ? "btn-outline-danger" : "btn-success"}`}
+                            onClick={() => handleToggleRestaurant(r._id)}
+                          >
+                            {r.isactive ? "Deactivate" : "Approve & Open"}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === "restaurants" && (
+              <div className="card shadow-sm border-0 rounded-4 p-4 bg-white">
+                <h5 className="fw-bold mb-3">All Registered Restaurants ({data.restaurant?.length})</h5>
+                <div className="table-responsive">
+                  <table className="table table-hover align-middle">
+                    <thead className="table-light">
+                      <tr>
+                        <th>#</th>
+                        <th>Restaurant Name</th>
+                        <th>City / Address</th>
+                        <th>Phone</th>
+                        <th>Rating</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(data.restaurant || []).map((r, i) => (
+                        <tr key={r._id}>
+                          <td>{i + 1}</td>
+                          <td>
+                            <div className="d-flex align-items-center gap-2">
+                              <img src={getImageUrl(r.image)} alt={r.name} style={{ width: "36px", height: "36px", objectFit: "cover", borderRadius: "6px" }} />
+                              <strong>{r.name}</strong>
+                            </div>
+                          </td>
+                          <td>{r.address}, {r.city}</td>
+                          <td>{r.phonenumber}</td>
+                          <td>★ {r.rating || "4.3"}</td>
+                          <td>
+                            <span className={`badge ${r.isactive ? "bg-success" : "bg-secondary"} rounded-pill`}>
+                              {r.isactive ? "Active" : "Inactive"}
+                            </span>
+                          </td>
+                          <td>
+                            <button
+                              className={`btn btn-sm rounded-pill px-3 ${r.isactive ? "btn-outline-danger" : "btn-outline-success"}`}
+                              onClick={() => handleToggleRestaurant(r._id)}
+                            >
+                              {r.isactive ? "Turn Off" : "Approve"}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {activeTab === "coupons" && (
+              <div className="row g-4">
+                <div className="col-lg-5">
+                  <div className="card shadow-sm border-0 rounded-4 p-4 bg-white">
+                    <h5 className="fw-bold mb-3">+ Create New Offer / Coupon</h5>
+                    <form onSubmit={handleCreateCoupon}>
+                      <div className="mb-2">
+                        <label className="form-label small fw-semibold">Coupon Code</label>
+                        <input
+                          type="text"
+                          className="form-control rounded-3 text-uppercase font-monospace"
+                          value={newCoupon.code}
+                          onChange={(e) => setNewCoupon({ ...newCoupon, code: e.target.value })}
+                          placeholder="e.g. FESTIVE30"
+                          required
+                        />
+                      </div>
+                      <div className="mb-2">
+                        <label className="form-label small fw-semibold">Offer Title / Description</label>
+                        <input
+                          type="text"
+                          className="form-control rounded-3"
+                          value={newCoupon.title}
+                          onChange={(e) => setNewCoupon({ ...newCoupon, title: e.target.value })}
+                          placeholder="e.g. 30% Off up to ₹150"
+                          required
+                        />
+                      </div>
+                      <div className="row g-2 mb-2">
+                        <div className="col-6">
+                          <label className="form-label small fw-semibold">Type</label>
+                          <select
+                            className="form-select rounded-3"
+                            value={newCoupon.discountType}
+                            onChange={(e) => setNewCoupon({ ...newCoupon, discountType: e.target.value })}
+                          >
+                            <option value="percentage">Percentage (%)</option>
+                            <option value="flat">Flat Amount (₹)</option>
+                          </select>
+                        </div>
+                        <div className="col-6">
+                          <label className="form-label small fw-semibold">Discount Value</label>
+                          <input
+                            type="number"
+                            className="form-control rounded-3"
+                            value={newCoupon.discountValue}
+                            onChange={(e) => setNewCoupon({ ...newCoupon, discountValue: Number(e.target.value) })}
+                            required
+                          />
+                        </div>
+                      </div>
+                      <div className="row g-2 mb-3">
+                        <div className="col-6">
+                          <label className="form-label small fw-semibold">Max Discount (₹)</label>
+                          <input
+                            type="number"
+                            className="form-control rounded-3"
+                            value={newCoupon.maxDiscount}
+                            onChange={(e) => setNewCoupon({ ...newCoupon, maxDiscount: Number(e.target.value) })}
+                          />
+                        </div>
+                        <div className="col-6">
+                          <label className="form-label small fw-semibold">Min Spend (₹)</label>
+                          <input
+                            type="number"
+                            className="form-control rounded-3"
+                            value={newCoupon.minOrderAmount}
+                            onChange={(e) => setNewCoupon({ ...newCoupon, minOrderAmount: Number(e.target.value) })}
+                          />
+                        </div>
+                      </div>
+                      <button type="submit" className="btn btn-primary-crave w-100 py-2">
+                        Publish Promo Code
+                      </button>
+                    </form>
+                  </div>
+                </div>
+
+                <div className="col-lg-7">
+                  <div className="card shadow-sm border-0 rounded-4 p-4 bg-white">
+                    <h5 className="fw-bold mb-3">Active Promotional Codes</h5>
+                    <div className="table-responsive">
+                      <table className="table table-hover align-middle">
+                        <thead className="table-light">
+                          <tr>
+                            <th>Code</th>
+                            <th>Description</th>
+                            <th>Value</th>
+                            <th>Min Order</th>
+                            <th>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(data.coupons || []).map((c) => (
+                            <tr key={c._id}>
+                              <td className="fw-bold font-monospace text-primary">{c.code}</td>
+                              <td>{c.title}</td>
+                              <td>{c.discountType === "percentage" ? `${c.discountValue}%` : `₹${c.discountValue}`}</td>
+                              <td>₹{c.minOrderAmount}</td>
+                              <td>
+                                <span className={`badge ${c.isActive ? "bg-success" : "bg-secondary"}`}>
+                                  {c.isActive ? "Active" : "Inactive"}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === "orders" && (
+              <div className="card shadow-sm border-0 rounded-4 p-4 bg-white">
+                <h5 className="fw-bold mb-3">Order Monitoring</h5>
+                <div className="table-responsive">
+                  <table className="table table-hover align-middle">
+                    <thead className="table-light">
+                      <tr>
+                        <th>Order ID</th>
+                        <th>User</th>
+                        <th>Item</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th>Delivery Partner</th>
+                        <th>Address</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(data.orders || []).map((o) => (
+                        <tr key={o._id}>
+                          <td className="fw-bold font-monospace">#{o._id.slice(-6).toUpperCase()}</td>
+                          <td>{o.userid?.name || "Customer"}</td>
+                          <td>{o.menuid?.name || (o.items && o.items[0]?.name) || "Dish"}</td>
+                          <td className="fw-bold">₹{o.totalAmount || o.price}</td>
+                          <td>
+                            <span className={`badge ${o.status === "Delivered" ? "bg-success" : "bg-warning text-dark"} rounded-pill`}>
+                              {o.status}
+                            </span>
+                          </td>
+                          <td>{o.deliverypersonid?.name || "Unassigned"}</td>
+                          <td className="small text-truncate" style={{ maxWidth: "200px" }}>{o.address}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {activeTab === "delivery" && (
+              <div className="card shadow-sm border-0 rounded-4 p-4 bg-white">
+                <h5 className="fw-bold mb-3">Delivery Partner Fleet ({data.deliveryman?.length})</h5>
+                <div className="table-responsive">
+                  <table className="table table-hover align-middle">
+                    <thead className="table-light">
+                      <tr>
+                        <th>#</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Vehicle</th>
+                        <th>Availability</th>
+                        <th>Rating</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(data.deliveryman || []).map((d, i) => (
+                        <tr key={d._id}>
+                          <td>{i + 1}</td>
+                          <td className="fw-bold">🛵 {d.name}</td>
+                          <td>{d.email}</td>
+                          <td>{d.phonenumber || "-"}</td>
+                          <td>{d.vehicleType || "Bike"}</td>
+                          <td>
+                            <span className={`badge ${d.isAvailable ? "bg-success" : "bg-secondary"} rounded-pill`}>
+                              {d.isAvailable ? "Online" : "Offline"}
+                            </span>
+                          </td>
+                          <td>★ {d.rating || "4.8"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {activeTab === "users" && (
+              <div className="card shadow-sm border-0 rounded-4 p-4 bg-white">
+                <h5 className="fw-bold mb-3">Registered Customers ({data.user?.length})</h5>
+                <div className="table-responsive">
+                  <table className="table table-hover align-middle">
+                    <thead className="table-light">
+                      <tr>
+                        <th>#</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>City / Address</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(data.user || []).map((u, i) => (
+                        <tr key={u._id}>
+                          <td>{i + 1}</td>
+                          <td className="fw-bold">👤 {u.name}</td>
+                          <td>{u.email}</td>
+                          <td>{u.phonenumber || "-"}</td>
+                          <td>{u.address || "-"}, {u.city || "-"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
-       <ToastContainer 
-    className="custom-toast"
-    autoClose={3000} 
-  />
 
-      {/* CSS */}
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap');
-        .dashboard-container {
-          min-height: 100vh;
-          background: linear-gradient(-45deg, #1a2a6c, #b21f1f, #fdbb2d, #00c6ff);
-          background-size: 400% 400%;
-          animation: gradientBG 15s ease infinite;
-        }
-        @keyframes gradientBG {
-          0% {background-position:0% 50%;}
-          50% {background-position:100% 50%;}
-          100% {background-position:0% 50%;}
-        }
-        summary {
-          cursor: pointer;
-          padding: 0.8rem 1rem;
-          background: rgba(255,255,255,0.1);
-          color: white;
-          border-radius: 8px;
-          font-size: 1.2rem;
-          font-weight: 500;
-          font-family: 'Poppins', sans-serif;
-          transition: background 0.3s, transform 0.2s;
-        }
-        summary:hover {
-          background: rgba(255,255,255,0.2);
-          transform: scale(1.02);
-        }
-        details[open] summary {
-          border-bottom-left-radius: 0;
-          border-bottom-right-radius: 0;
-        }
-        .dashboard-section {
-          padding: 0.5rem;
-          transition: box-shadow 0.3s ease, transform 0.3s ease;
-          background: rgba(255,255,255,0.05);
-          border-radius: 10px;
-        }
-        .dashboard-section[open] {
-          box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-          transform: translateY(3px);
-        }
-        .animate-table {
-          animation: fadeInUp 0.5s ease forwards;
-        }
-        @keyframes fadeInUp {
-          0% { opacity: 0; transform: translateY(15px);}
-          100% { opacity: 1; transform: translateY(0);}
-        }
-        .table-hover tbody tr:hover {
-          background-color: rgba(255, 255, 255, 0.15) !important;
-          transition: background 0.3s;
-        }
-        table {
-          border-radius: 8px;
-          overflow: hidden;
-        }
-
-        .custom-toast {
-      top: 80px !important;
-      left: 75% !important;
-      right: auto !important;
-      width: 320px !important;
-    }
-
-    /* Tablet */
-    @media (max-width: 1024px) {
-      .custom-toast {
-        left: 65% !important;
-        width: 280px !important;
-      }
-    }
-
-    /* Mobile */
-    @media (max-width: 600px) {
-      .custom-toast {
-        left: 50% !important;
-        transform: translateX(-50%) !important;
-        width: 90% !important;
-        max-width: 300px !important;
-      }
-    }
-      `}</style>
+      <ToastContainer position="top-right" autoClose={3000} />
     </div>
   );
 }

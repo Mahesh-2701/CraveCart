@@ -1,8 +1,8 @@
-import React, { useEffect, useState} from "react";
+import React, { useEffect, useState } from "react";
 import Footer from "../components/Footer";
-import axios from "axios";
+import api from "../config/api";
 import { useNavigate } from "react-router-dom";
-import { ToastContainer,toast } from "react-toastify";
+import { ToastContainer, toast } from "react-toastify";
 import DeliveryNavbar from "../components/DeliveryNavbar";
 
 export default function DeliveryPersonView() {
@@ -27,9 +27,12 @@ export default function DeliveryPersonView() {
         });
 
     useEffect(()=>{
-        axios.get("https://cravecart-5vz7.onrender.com/delivery/view/"+deliverypersonid,{headers:{Authorization:"Bearer "+localStorage.getItem("token")}})
-        .then((res)=>setDelperson({...res.data})).catch((err)=>toast.error("Network Error "+err.message))
-    },[])
+        if (deliverypersonid) {
+          api.get("/delivery/view/"+deliverypersonid)
+          .then((res)=>setDelperson({...res.data}))
+          .catch((err)=>toast.error("Network Error "+ (err.response?.data?.message || err.message)));
+        }
+    },[deliverypersonid])
 
     const update=(event)=>{
       setDelperson({...delperson,[event.target.name]:event.target.value})
@@ -37,8 +40,6 @@ export default function DeliveryPersonView() {
 
     const handleupdate=(eve)=>{
          eve.preventDefault();
-         console.log(delperson)
-
 
           if( !/^\d{10}$/.test(delperson.phonenumber) ){
               return setErrormsg((prev)=>({...prev,phonenumber:true}))
@@ -47,15 +48,15 @@ export default function DeliveryPersonView() {
              setErrormsg((prev)=>({...prev,phonenumber:false}))
           }
          
-         axios.put("https://cravecart-5vz7.onrender.com/delivery/update/"+deliverypersonid,delperson,{headers:{Authorization:"Bearer "+localStorage.getItem("token")}})
+         api.put("/delivery/update/"+deliverypersonid, delperson)
         .then((res)=>{
           toast.success(res.data.message);
-           localStorage.removeItem("id");
+          localStorage.removeItem("id");
           localStorage.removeItem("token");
           localStorage.removeItem("role");
           setTimeout(()=>navigate("/delivery"),1500)
         })
-        .catch((err)=>toast.error("Network Error "+err.message))
+        .catch((err)=>toast.error("Network Error "+ (err.response?.data?.message || err.message)))
 
     }
 

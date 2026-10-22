@@ -1,16 +1,10 @@
-import React from 'react'
-import { Navigate, Outlet } from 'react-router-dom';
+import React from "react";
+import { Navigate, Outlet } from "react-router-dom";
 
-export default function Protectedroute({children}) {
+export default function ProtectedRoute() {
+  const isAuth = Boolean(
+    localStorage.getItem("token") && localStorage.getItem("role") === "user"
+  );
 
-    const isAuth = localStorage.getItem("token") && localStorage.getItem("role") == "user"
-
-    if(!isAuth){
-        return <Navigate to="/user/login"></Navigate>
-    }
-    else{
-        return <Outlet></Outlet>
-    }
-
-
+  return isAuth ? <Outlet /> : <Navigate to="/user/login" replace />;
 }

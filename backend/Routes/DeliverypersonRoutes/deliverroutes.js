@@ -1,127 +1,222 @@
 const express = require("express");
 const deliverySchema = require("../../Models/Deliveryperson");
-const orderSchema = require("../../Models/OrderSchema")
-const jwt=require("jsonwebtoken")
-const bcrypt=require("bcryptjs")
+const orderSchema = require("../../Models/OrderSchema");
+const { signToken } = require("../../config/auth.config");
+const { authenticate, authorizeRoles } = require("../../middleware/auth.middleware");
+const { startDeliverySimulation, stopDeliverySimulation } = require("../../services/socket.service");
+const { sendStatusUpdate } = require("../../services/email.service");
 
 const deliveryroute = express.Router();
+deliveryroute.use(express.json());
 
-const secrettoken="rajimahi"
-
-const validatetoken= (req,res,next)=>{
-    
-    const token=req.headers["authorization"]
-    const tokenonly=token && token.split(" ")[1];
-
-    if(tokenonly){
-        
-        jwt.verify(tokenonly,secrettoken,(err,payload)=>{
-
-            if(err){
-                return res.status(400).json({message:"Invaild Token"})
-            }
-
-            req.deliveryperson=payload
-        })
-    }
-    else{
-        return res.status(400).json({message:"Token required"})
-    }
-    next()
-}
-
+/**
+ * Delivery Person Registration
+ */
 deliveryroute.post("/signin", async (req, res) => {
   const deliveryperson = { ...req.body };
 
   try {
-    await deliverySchema.create({ ...deliveryperson });
-    res.status(200).json({ message: "Registration Success" });
+    const existing = await deliverySchema.findOne({ email: deliveryperson.email });
+    if (existing) {
+      return res.status(400).json({ message: "Email already registered for delivery partner." });
+    }
+
+    const created = await deliverySchema.create({ ...deliveryperson });
+    return res.status(200).json({ message: "Registration Success", id: created._id });
   } catch (err) {
-    console.log(err.message)
-    res.status(500).json({ message: "Registration Failed " + err.message });
+    return res.status(500).json({ message: "Registration Failed: " + err.message });
   }
 });
 
-//login
-
+/**
+ * Delivery Person Login
+ */
 deliveryroute.post("/login", async (req, res) => {
-  let enteredemail = req.body.email;
-  let enteredpassword = req.body.password;
-
-  console.log(enteredemail);
-    console.log(enteredpassword);
+  const enteredemail = (req.body.email || "").trim().toLowerCase();
+  const enteredpassword = req.body.password;
 
   try {
-    let result = await deliverySchema.findOne({ email: enteredemail });
+    const result = await deliverySchema.findOne({ email: enteredemail });
 
     if (result) {
+      const isMatch = await result.comparepassword(enteredpassword);
 
-        let comparingpassword = await result.comparepassword(enteredpassword)
+      if (isMatch) {
+        const token = signToken({
+          email: result.email,
+          id: result._id,
+          role: result.role || "deliveryperson",
+        });
 
-      if (comparingpassword) {
-         
-         const token =jwt.sign({email:result.email,id:result._id,role:result.role},secrettoken,{expiresIn:"6h"})
-         console.log(token)
-         res.status(200).json({message:"Login Success",email:result.email,id:result._id,role:result.role,token:token})
-      } 
-      else {
-         res.status(400).json({ message: "Invaild Password Credentials" });
+        return res.status(200).json({
+          message: "Login Success",
+          email: result.email,
+          id: result._id,
+          name: result.name,
+          role: result.role || "deliveryperson",
+          token: token,
+        });
+      } else {
+        return res.status(400).json({ message: "Invalid Password Credentials" });
       }
-
     } else {
-      res.status(400).json({ message: "Invaild Email Credentials" });
+      return res.status(400).json({ message: "Invalid Email Credentials" });
     }
   } catch (err) {
-    res.status(500).json({ message: "Server Error "+err.message });
+    return res.status(500).json({ message: "Server Error " + err.message });
   }
 });
 
-//display
+/**
+ * Display Delivery Person Profile
+ */
+deliveryroute.get("/view/:id", authenticate, async (req, res) => {
+  const delpersonid = req.params.id;
 
-deliveryroute.get("/view/:id",validatetoken,async(req,res)=>{
-     const delpersonid=req.params.id;
+  try {
+    const result = await deliverySchema.findById(delpersonid).select("-password");
+    if (!result) return res.status(404).json({ message: "Delivery partner not found." });
+    return res.status(200).json(result);
+  } catch (err) {
+    return res.status(500).json({ message: "Server Error : " + err.message });
+  }
+});
 
-     try{
-         
-        const result = await deliverySchema.findById(delpersonid)
-        res.status(200).json(result)
-     }
-     catch(err){
-        res.status(500).json({message:"Server Error : "+err.message})
-     }
-})
+/**
+ * Update Delivery Person Profile
+ */
+deliveryroute.put("/update/:id", authenticate, async (req, res) => {
+  const delperson = { ...req.body };
+  const delpersonid = req.params.id;
 
-//update deatils
+  try {
+    await deliverySchema.findByIdAndUpdate(delpersonid, { ...delperson });
+    return res.status(200).json({ message: "Update Success Please Login to Continue" });
+  } catch (err) {
+    return res.status(500).json({ message: "Error Try Again Later : " + err.message });
+  }
+});
 
-deliveryroute.put("/update/:id",validatetoken,async(req,res)=>{
+/**
+ * Toggle Delivery Partner Availability
+ */
+deliveryroute.patch("/availability/:id", authenticate, async (req, res) => {
+  const delpersonid = req.params.id;
+  const { isAvailable } = req.body;
 
-    let delperson = { ...req.body}
-    let delpersonid = req.params.id
+  try {
+    const updated = await deliverySchema.findByIdAndUpdate(
+      delpersonid,
+      { $set: { isAvailable: Boolean(isAvailable) } },
+      { new: true }
+    );
+    return res.status(200).json({
+      message: `Status updated: You are now ${updated.isAvailable ? "Online (Accepting Orders)" : "Offline"}`,
+      isAvailable: updated.isAvailable,
+    });
+  } catch (err) {
+    return res.status(500).json({ message: "Failed to update availability: " + err.message });
+  }
+});
 
-    try{
-         await deliverySchema.findByIdAndUpdate(delpersonid,{...delperson})
-         res.status(200).json({message:"Update Success Please Login to Continue"})
-        
+/**
+ * Assigned Order History for Delivery Partner
+ */
+deliveryroute.get("/order/:id", authenticate, async (req, res) => {
+  const deliverypersonid = req.params.id;
+
+  try {
+    const result = await orderSchema
+      .find({ deliverypersonid: deliverypersonid })
+      .populate("userid", "-password")
+      .populate({ path: "menuid", populate: { path: "restaurantid" } })
+      .populate("deliverypersonid", "-password")
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json(result);
+  } catch (err) {
+    return res.status(500).json({ message: "Server Error " + err.message });
+  }
+});
+
+/**
+ * Delivery Status Transition (e.g. Out for Delivery, Delivered)
+ */
+deliveryroute.patch("/order/status/:orderId", authenticate, async (req, res) => {
+  const { orderId } = req.params;
+  const { status } = req.body;
+
+  try {
+    const updatedOrder = await orderSchema
+      .findByIdAndUpdate(
+        orderId,
+        {
+          $set: { status },
+          $push: {
+            statusHistory: {
+              status,
+              timestamp: new Date(),
+              comment: `Status updated to ${status} by delivery partner.`,
+              updatedBy: "delivery_partner",
+            },
+          },
+        },
+        { new: true }
+      )
+      .populate("userid", "-password")
+      .populate("deliverypersonid")
+      .populate({ path: "menuid", populate: { path: "restaurantid" } });
+
+    if (!updatedOrder) {
+      return res.status(404).json({ message: "Order not found." });
     }
-    catch(err){
-        res.status(500).json({message:"Error Try Again Later : "+err.message})
+
+    if (req.io) {
+      req.io.to(`user_${updatedOrder.userid._id}`).emit("orderStatusChanged", updatedOrder);
+      req.io.to(`order_${orderId}`).emit("status:update", { orderId, status });
     }
-})
 
-//orderhistory details
+    sendStatusUpdate(updatedOrder, updatedOrder.userid, status);
 
-deliveryroute.get("/order/:id",validatetoken,async(req,res)=>{
-    let deliverypersonid = req.params.id
+    return res.status(200).json({ message: "Order status updated successfully", order: updatedOrder });
+  } catch (err) {
+    return res.status(500).json({ message: "Failed to update status: " + err.message });
+  }
+});
 
-    try{
-        var result = await orderSchema.find({ deliverypersonid : deliverypersonid }).populate("userid")
-                .populate({ path : "menuid" , populate : { path :"restaurantid"} }).populate("deliverypersonid").sort({createdAt:-1})
+/**
+ * Development / Demonstration Delivery Route Simulation Endpoint
+ */
+deliveryroute.post("/simulate/:orderId", authenticate, async (req, res) => {
+  const { orderId } = req.params;
+  const { intervalMs = 2000, stepCount = 15 } = req.body;
 
-       res.status(200).json(result) 
-    }
-    catch(err){
-      res.status(200).json({message:"Server Error "+err.message})
-    }
-})
+  try {
+    const order = await orderSchema.findById(orderId);
+    if (!order) return res.status(404).json({ message: "Order not found." });
+
+    const startCoords = order.restaurantCoordinates || { lat: 12.9650, lng: 77.5880 };
+    const endCoords = order.customerCoordinates || { lat: 12.9780, lng: 77.6010 };
+
+    startDeliverySimulation(orderId, startCoords, endCoords, stepCount, intervalMs);
+
+    return res.status(200).json({
+      message: "Delivery simulation started successfully. Listening on room 'order_" + orderId + "'.",
+      isSimulated: true,
+      simulationNotice: "DEMO / SIMULATED TRACKING ACTIVE",
+    });
+  } catch (err) {
+    return res.status(500).json({ message: "Failed to start simulation: " + err.message });
+  }
+});
+
+/**
+ * Stop Delivery Simulation
+ */
+deliveryroute.post("/simulate-stop/:orderId", authenticate, (req, res) => {
+  const { orderId } = req.params;
+  stopDeliverySimulation(orderId);
+  return res.status(200).json({ message: "Delivery simulation stopped." });
+});
 
 module.exports = deliveryroute;

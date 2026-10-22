@@ -1,3 +1,16 @@
-# https://www.robotstxt.org/robotstxt.html
+# CraveCart Robots Policy
 User-agent: *
-Disallow:
+Allow: /
+Allow: /foods
+Allow: /restaurants
+
+# Disallow private user and administrative portal routes
+Disallow: /user/cart
+Disallow: /user/orders
+Disallow: /user/update
+Disallow: /orders/track/*
+Disallow: /admin/*
+Disallow: /restaurant/admin/*
+Disallow: /delivery/*
+
+Sitemap: https://cravecart.com/sitemap.xml

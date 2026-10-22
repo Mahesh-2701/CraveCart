@@ -1,72 +1,70 @@
-import React, { useEffect, useState} from "react";
+import React, { useEffect, useState } from "react";
 import Footer from "../components/Footer";
-import axios from "axios";
+import api from "../config/api";
 import { useNavigate } from "react-router-dom";
-import { ToastContainer,toast } from "react-toastify";
+import { ToastContainer, toast } from "react-toastify";
 import Navbar from "../components/Navbar";
 
 export default function UserProfile() {
    
     const navigate = useNavigate();
 
-    const userid=localStorage.getItem("id")
+    const userid = localStorage.getItem("id");
 
-    const [delperson,setDelperson]=useState({
-        id:"",
-        name:"",
-        email:"",
-        password:"",
-        address:"",
-        phonenumber:"",
-        city:"",
-        pincode:""
-    })
+    const [delperson, setDelperson] = useState({
+        id: "",
+        name: "",
+        email: "",
+        password: "",
+        address: "",
+        phonenumber: "",
+        city: "",
+        pincode: ""
+    });
 
-    const [errormsg,setErrormsg]=useState({
+    const [errormsg, setErrormsg] = useState({
+        phonenumber: false,
+        pincode: false
+    });
 
-         phonenumber : false,
-         pincode:false
-        });
+    useEffect(() => {
+        if (userid) {
+          api.get("/user/view/" + userid)
+          .then((res) => setDelperson({ ...res.data }))
+          .catch((err) => toast.error("Network Error " + (err.response?.data?.message || err.message)));
+        }
+    }, [userid]);
 
-    useEffect(()=>{
-        axios.get("https://cravecart-5vz7.onrender.com/user/view/"+userid,{headers:{Authorization:"Bearer "+localStorage.getItem("token")}})
-        .then((res)=>setDelperson({...res.data})).catch((err)=>toast.error("Network Error "+err.message))
-    },[])
+    const update = (event) => {
+      setDelperson({ ...delperson, [event.target.name]: event.target.value });
+    };
 
-    const update=(event)=>{
-      setDelperson({...delperson,[event.target.name]:event.target.value})
-    }
-
-    const handleupdate=(eve)=>{
+    const handleupdate = (eve) => {
          eve.preventDefault();
-         console.log(delperson)
 
-
-          if( !/^\d{10}$/.test(delperson.phonenumber) ){
-              return setErrormsg((prev)=>({...prev,phonenumber:true}))
-          }
-          else{
-             setErrormsg((prev)=>({...prev,phonenumber:false}))
+          if (!/^\d{10}$/.test(delperson.phonenumber)) {
+              return setErrormsg((prev) => ({ ...prev, phonenumber: true }));
+          } else {
+             setErrormsg((prev) => ({ ...prev, phonenumber: false }));
           }
 
-           if (!/^\d{6}$/.test(delperson.pincode)) {
-           return setErrormsg((prev)=>({ ...prev, pincode: true }));
-          }
-          else{
-             setErrormsg((prev)=>({...prev,pincode:false}))
+          if (!/^\d{6}$/.test(delperson.pincode)) {
+             return setErrormsg((prev) => ({ ...prev, pincode: true }));
+          } else {
+             setErrormsg((prev) => ({ ...prev, pincode: false }));
           }
          
-         axios.put("https://cravecart-5vz7.onrender.com/user/update/"+userid,delperson,{headers:{Authorization:"Bearer "+localStorage.getItem("token")}})
-        .then((res)=>{
+         api.put("/user/update/" + userid, delperson)
+        .then((res) => {
           toast.success(res.data.message);
           localStorage.removeItem("id");
           localStorage.removeItem("token");
           localStorage.removeItem("role");
-          setTimeout(()=>navigate("/user/login"),1500)
+          setTimeout(() => navigate("/user/login"), 1500);
         })
-        .catch((err)=>toast.error(err.response.data.message))
+        .catch((err) => toast.error(err.response?.data?.message || err.message));
 
-    }
+    };
 
   return (
     <div>

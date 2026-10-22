@@ -1,9 +1,9 @@
-import {React, useState} from 'react'
-import axios from 'axios'
-import {  useNavigate } from 'react-router-dom'
-import { ToastContainer, toast } from 'react-toastify'
+import React, { useState } from 'react';
+import api from '../config/api';
+import { useNavigate } from 'react-router-dom';
+import { ToastContainer, toast } from 'react-toastify';
 import Footer from '../components/Footer';
-import DeliveryNavbar from "../components/DeliveryNavbar"
+import DeliveryNavbar from "../components/DeliveryNavbar";
 
 export default function DeliveryPerson() {
      const navigate=useNavigate();
@@ -23,14 +23,16 @@ export default function DeliveryPerson() {
     
              event.preventDefault();
     
-             axios.post("https://cravecart-5vz7.onrender.com/delivery/login",login)
-             .then((res)=>{ 
+             api.post("/delivery/login", login)
+             .then((res) => { 
                 toast.success(res.data.message);
-                 localStorage.setItem("token",res.data.token) ;
-                 localStorage.setItem("role",res.data.role) ;
-                 localStorage.setItem("id",res.data.id)
-                  setTimeout(()=>navigate("/delivery/order"),1500)})
-             .catch((err)=>{ toast.error(err.response.data.message)})
+                localStorage.setItem("token", res.data.token);
+                localStorage.setItem("role", res.data.role);
+                localStorage.setItem("id", res.data.id);
+                localStorage.setItem("name", res.data.name || "Delivery Partner");
+                setTimeout(() => navigate("/delivery/order"), 1200);
+             })
+             .catch((err) => { toast.error(err.response?.data?.message || "Invalid credentials"); });
      
         }
 
@@ -83,9 +85,11 @@ export default function DeliveryPerson() {
                }
      
      
-                axios.post("https://cravecart-5vz7.onrender.com/delivery/signin",user)
-                .then((res)=>toast.success(res.data.message) )
-                .catch((err)=>{ toast.error("Email Already Exists Or "+err.response.data.message)})
+                api.post("/delivery/signin", user)
+                .then((res) => {
+                  toast.success(res.data.message || "Registration Success! Please login.");
+                })
+                .catch((err) => { toast.error("Email Already Exists Or " + (err.response?.data?.message || err.message)); });
          }
 
   return (
