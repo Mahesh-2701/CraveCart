@@ -104,13 +104,13 @@ export default function Cart() {
     return new Promise((resolve) => {
       if (window.Razorpay) {
         resolve(true);
-        return;
+      } else {
+        const script = document.createElement("script");
+        script.src = "https://checkout.razorpay.com/v1/checkout.js";
+        script.onload = () => resolve(true);
+        script.onerror = () => resolve(false);
+        document.body.appendChild(script);
       }
-      const script = document.createElement("script");
-      script.src = "https://checkout.razorpay.com/v1/checkout.js";
-      script.onload = () => resolve(true);
-      script.onerror = () => resolve(false);
-      document.body.appendChild(script);
     });
   };
 
@@ -258,23 +258,42 @@ export default function Cart() {
       <Navbar />
 
       <div className="container my-4 flex-grow-1">
-        <h3 className="mb-4 fw-bold d-flex align-items-center gap-2">
-          <span>🛒</span> Review Your Cart & Checkout
-        </h3>
+        <div className="d-flex align-items-center gap-2 mb-4">
+          <span className="badge rounded-circle bg-primary bg-opacity-10 text-primary p-2">
+            <i className="bi bi-cart3 fs-5"></i>
+          </span>
+          <div>
+            <h3 className="mb-0 fw-bold font-heading text-dark">Checkout & Review</h3>
+            <small className="text-muted">Ensure your delivery details and items are correct</small>
+          </div>
+        </div>
 
         {loading ? (
-          <div className="text-center py-5">
-            <div className="spinner-border text-primary" role="status" />
-            <p className="mt-2 text-muted">Loading your items...</p>
+          <div className="row g-4">
+            <div className="col-lg-7">
+              <div className="card shadow-xs border-0 rounded-4 p-4 bg-white">
+                <div className="skeleton rounded-3 mb-3" style={{ height: "80px" }}></div>
+                <div className="skeleton rounded-3 mb-3" style={{ height: "80px" }}></div>
+              </div>
+            </div>
+            <div className="col-lg-5">
+              <div className="card shadow-xs border-0 rounded-4 p-4 bg-white">
+                <div className="skeleton rounded-3 mb-3" style={{ height: "180px" }}></div>
+              </div>
+            </div>
           </div>
         ) : cartItems.length === 0 ? (
-          <div className="card shadow-sm border-0 rounded-4 text-center py-5 p-4">
-            <span style={{ fontSize: "54px" }}>🍽️</span>
-            <h4 className="mt-3 fw-bold">Your cart is empty</h4>
-            <p className="text-muted">Good food is always just a few clicks away!</p>
+          <div className="card shadow-xs border-0 rounded-4 text-center py-5 p-4 bg-white my-4">
+            <div className="mx-auto text-muted mb-3 p-3 bg-light rounded-circle" style={{ width: "80px", height: "80px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <i className="bi bi-bag-x fs-1 text-primary"></i>
+            </div>
+            <h4 className="mt-2 fw-bold font-heading text-dark">Your cart is empty</h4>
+            <p className="text-muted small mx-auto" style={{ maxWidth: "380px" }}>
+              Explore our chef-curated selection of dishes and popular restaurants to fill your cart.
+            </p>
             <div>
               <button
-                className="btn btn-primary-crave px-4 py-2 mt-2"
+                className="btn btn-crave-primary px-4 py-2 mt-2"
                 onClick={() => navigate("/foods")}
               >
                 Browse Menu
@@ -285,8 +304,17 @@ export default function Cart() {
           <div className="row g-4">
             {/* Cart Items List */}
             <div className="col-lg-7">
-              <div className="card shadow-sm border-0 rounded-4 p-3 mb-4 bg-white">
-                <h5 className="fw-bold mb-3">Order Items ({cartItems.length})</h5>
+              <div className="card shadow-xs border-0 rounded-4 p-4 mb-4 bg-white">
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                  <h5 className="fw-bold font-heading mb-0 text-dark">Order Items ({cartItems.length})</h5>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-link text-primary text-decoration-none fw-semibold"
+                    onClick={() => navigate("/foods")}
+                  >
+                    + Add More Items
+                  </button>
+                </div>
                 <div className="d-flex flex-column gap-3">
                   {cartItems.map((item, index) => (
                     <CartCard
@@ -300,10 +328,12 @@ export default function Cart() {
               </div>
 
               {/* Delivery Address Form */}
-              <div className="card shadow-sm border-0 rounded-4 p-4 bg-white">
-                <h5 className="fw-bold mb-3">📍 Delivery Address</h5>
+              <div className="card shadow-xs border-0 rounded-4 p-4 bg-white">
+                <h5 className="fw-bold font-heading mb-3 d-flex align-items-center gap-2 text-dark">
+                  <i className="bi bi-geo-alt text-danger"></i> Delivery Destination
+                </h5>
                 <textarea
-                  className="form-control rounded-3"
+                  className="crave-input rounded-3"
                   rows="3"
                   placeholder="Enter complete delivery street address, house/flat number, landmarks..."
                   value={address}
@@ -316,24 +346,29 @@ export default function Cart() {
             {/* Bill Summary & Payment */}
             <div className="col-lg-5">
               {/* Coupons Widget */}
-              <div className="card shadow-sm border-0 rounded-4 p-3 mb-4 bg-white">
-                <h6 className="fw-bold mb-2">🏷️ Apply Coupon</h6>
+              <div className="card shadow-xs border-0 rounded-4 p-4 mb-4 bg-white">
+                <h6 className="fw-bold font-heading mb-2 text-dark d-flex align-items-center gap-2">
+                  <i className="bi bi-ticket-perforated text-warning"></i> Offers & Coupons
+                </h6>
                 <div className="input-group mb-2">
                   <input
                     type="text"
-                    className="form-control text-uppercase font-monospace"
+                    className="form-control text-uppercase font-monospace border rounded-start-pill ps-3"
                     placeholder="Enter Coupon (e.g. WELCOME50)"
                     value={couponCode}
                     onChange={(e) => setCouponCode(e.target.value)}
                     disabled={Boolean(appliedCoupon)}
                   />
                   {appliedCoupon ? (
-                    <button className="btn btn-outline-danger" onClick={handleRemoveCoupon}>
+                    <button
+                      className="btn btn-outline-danger rounded-end-pill px-3"
+                      onClick={handleRemoveCoupon}
+                    >
                       Remove
                     </button>
                   ) : (
                     <button
-                      className="btn btn-primary"
+                      className="btn btn-crave-primary rounded-end-pill px-3"
                       onClick={() => handleApplyCoupon()}
                       disabled={!couponCode.trim()}
                     >
@@ -348,11 +383,11 @@ export default function Cart() {
                     {availableCoupons.map((c) => (
                       <span
                         key={c.code}
-                        className="badge bg-light text-primary border p-2 cursor-pointer"
+                        className="badge bg-light text-primary border p-2 cursor-pointer rounded-pill d-inline-flex align-items-center gap-1"
                         style={{ cursor: "pointer" }}
                         onClick={() => handleApplyCoupon(c.code)}
                       >
-                        ⚡ {c.code} ({c.discountValue}% OFF)
+                        <i className="bi bi-lightning-charge-fill text-warning"></i> {c.code} ({c.discountValue}% OFF)
                       </span>
                     ))}
                   </div>
@@ -360,8 +395,8 @@ export default function Cart() {
               </div>
 
               {/* Bill Details */}
-              <div className="card shadow-sm border-0 rounded-4 p-4 bg-white mb-4">
-                <h5 className="fw-bold mb-3">Bill Details</h5>
+              <div className="card shadow-xs border-0 rounded-4 p-4 bg-white mb-4">
+                <h5 className="fw-bold font-heading mb-3 text-dark">Payment Breakdown</h5>
                 <div className="d-flex justify-content-between mb-2">
                   <span className="text-muted">Item Subtotal</span>
                   <span className="fw-semibold">₹{subtotal}</span>
@@ -376,17 +411,23 @@ export default function Cart() {
                     <span className="fw-bold">-₹{discountAmount}</span>
                   </div>
                 )}
-                <hr />
+                <hr className="my-3" />
                 <div className="d-flex justify-content-between align-items-center mb-4">
-                  <span className="fs-5 fw-bold">To Pay</span>
-                  <span className="fs-4 fw-bold text-primary">₹{grandTotal}</span>
+                  <span className="fs-5 fw-bold font-heading text-dark">To Pay</span>
+                  <span className="fs-3 fw-bold font-heading text-primary">₹{grandTotal}</span>
                 </div>
 
                 {/* Payment Selection */}
-                <h6 className="fw-bold mb-2">Choose Payment Option</h6>
-                <div className="form-check p-3 border rounded-3 mb-2 d-flex align-items-center gap-2">
+                <h6 className="fw-bold font-heading mb-2 text-dark">Select Payment Method</h6>
+                <div
+                  className={`p-3 border rounded-3 mb-2 d-flex align-items-center gap-3 transition-all cursor-pointer ${
+                    paymentMethod === "Online" ? "border-primary bg-primary bg-opacity-10" : "bg-light"
+                  }`}
+                  style={{ cursor: "pointer" }}
+                  onClick={() => setPaymentMethod("Online")}
+                >
                   <input
-                    className="form-check-input ms-0"
+                    className="form-check-input ms-0 my-0"
                     type="radio"
                     name="paymentMethod"
                     id="onlinePay"
@@ -394,14 +435,24 @@ export default function Cart() {
                     checked={paymentMethod === "Online"}
                     onChange={(e) => setPaymentMethod(e.target.value)}
                   />
-                  <label className="form-check-label w-100" htmlFor="onlinePay">
-                    <strong>Razorpay Checkout (UPI, Cards, Net Banking)</strong>
-                    <span className="badge bg-success ms-2">Test Mode Active</span>
-                  </label>
+                  <div className="flex-grow-1">
+                    <div className="fw-bold font-heading text-dark d-flex align-items-center gap-2">
+                      <i className="bi bi-credit-card-2-front text-primary"></i>
+                      <span>Razorpay (UPI, Cards, NetBanking)</span>
+                    </div>
+                    <small className="text-muted">Instant checkout with real-time webhooks</small>
+                  </div>
                 </div>
-                <div className="form-check p-3 border rounded-3 mb-4 d-flex align-items-center gap-2">
+
+                <div
+                  className={`p-3 border rounded-3 mb-4 d-flex align-items-center gap-3 transition-all cursor-pointer ${
+                    paymentMethod === "COD" ? "border-primary bg-primary bg-opacity-10" : "bg-light"
+                  }`}
+                  style={{ cursor: "pointer" }}
+                  onClick={() => setPaymentMethod("COD")}
+                >
                   <input
-                    className="form-check-input ms-0"
+                    className="form-check-input ms-0 my-0"
                     type="radio"
                     name="paymentMethod"
                     id="codPay"
@@ -409,20 +460,24 @@ export default function Cart() {
                     checked={paymentMethod === "COD"}
                     onChange={(e) => setPaymentMethod(e.target.value)}
                   />
-                  <label className="form-check-label w-100" htmlFor="codPay">
-                    <strong>Cash on Delivery (COD)</strong>
-                  </label>
+                  <div className="flex-grow-1">
+                    <div className="fw-bold font-heading text-dark d-flex align-items-center gap-2">
+                      <i className="bi bi-cash-stack text-success"></i>
+                      <span>Cash on Delivery (COD)</span>
+                    </div>
+                    <small className="text-muted">Pay in cash upon doorstep arrival</small>
+                  </div>
                 </div>
 
                 <button
-                  className="btn btn-primary-crave w-100 py-3 fs-5"
+                  className="btn btn-crave-primary w-100 py-3 fs-5 font-heading"
                   onClick={handleCheckout}
                   disabled={isProcessingPayment}
                 >
                   {isProcessingPayment ? (
                     <span>
                       <span className="spinner-border spinner-border-sm me-2" />
-                      Processing Order...
+                      Securing Order...
                     </span>
                   ) : (
                     `Pay ₹${grandTotal} & Place Order`

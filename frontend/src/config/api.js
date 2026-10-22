@@ -14,17 +14,21 @@ export const WS_URL =
     ? "http://localhost:5000"
     : "https://cravecart-5vz7.onrender.com");
 
-// High-resolution OpenStreetMap & CartoDB Voyager map style for MapLibre GL
+// Map API Key & Multiple High-Reliability Map Styles
+export const MAP_KEY =
+  process.env.REACT_APP_MAP_KEY || "cb1_4rod_1_bdb3f35922b85a77c1e0e8b6";
+
+// High-resolution Street Map style for MapLibre GL
 export const MAP_STYLE = {
   version: 8,
   sources: {
-    "osm-voyager": {
+    "carto-voyager": {
       type: "raster",
       tiles: [
-        "https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png",
-        "https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png",
-        "https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png",
-        "https://d.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png",
+        `https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?api_key=${MAP_KEY}`,
+        `https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?api_key=${MAP_KEY}`,
+        `https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?api_key=${MAP_KEY}`,
+        `https://d.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?api_key=${MAP_KEY}`,
       ],
       tileSize: 256,
       attribution:
@@ -33,14 +37,48 @@ export const MAP_STYLE = {
   },
   layers: [
     {
-      id: "osm-voyager-layer",
+      id: "carto-voyager-layer",
       type: "raster",
-      source: "osm-voyager",
+      source: "carto-voyager",
       minzoom: 0,
       maxzoom: 20,
     },
   ],
 };
+
+// Alternative satellite & street styles for live switcher
+export const MAP_STYLES_PRESETS = {
+  voyager: MAP_STYLE,
+  streets: {
+    version: 8,
+    sources: {
+      "esri-streets": {
+        type: "raster",
+        tiles: [
+          "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+        ],
+        tileSize: 256,
+        attribution: "Tiles &copy; Esri, DeLorme, NAVTEQ",
+      },
+    },
+    layers: [{ id: "esri-streets-layer", type: "raster", source: "esri-streets" }],
+  },
+  satellite: {
+    version: 8,
+    sources: {
+      "esri-satellite": {
+        type: "raster",
+        tiles: [
+          "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        ],
+        tileSize: 256,
+        attribution: "Tiles &copy; Esri, Maxar, Earthstar Geographics",
+      },
+    },
+    layers: [{ id: "esri-satellite-layer", type: "raster", source: "esri-satellite" }],
+  },
+};
+
 
 // Centralized Axios instance
 export const api = axios.create({

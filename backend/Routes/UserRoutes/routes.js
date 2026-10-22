@@ -296,32 +296,35 @@ userrouter.delete("/cartrefresh/:id", authenticate, enforceOwnership("id"), asyn
 userrouter.post("/order/:id", authenticate, enforceOwnership("id"), async (req, res) => {
   const userid = req.params.id;
 
-  // Find an available delivery partner
-  let deliverypersonid = null;
   try {
-    const availableDelivery = await deliverySchema.findOne({ isAvailable: true }) || (await deliverySchema.findOne());
-    if (availableDelivery) {
-      deliverypersonid = availableDelivery._id;
-    }
-  } catch (err) {
-    console.warn("Delivery assignment notice:", err.message);
-  }
-
-  try {
-    // Authoritative pricing calculation
+    // 1. Authoritative pricing calculation & restaurant discovery
     let calculatedSubtotal = 0;
     const items = req.body.items || [];
+    let detectedRestaurantId = null;
+    let detectedRestCoordinates = { lat: 12.9784, lng: 77.6408 };
 
     if (items.length > 0) {
       for (const it of items) {
-        const m = await menuSchema.findById(it.menuid);
+        const m = await menuSchema.findById(it.menuid).populate("restaurantid");
         if (m) {
           calculatedSubtotal += m.price * (it.quantity || 1);
+          if (!detectedRestaurantId && m.restaurantid) {
+            detectedRestaurantId = m.restaurantid._id || m.restaurantid;
+            if (m.restaurantid.coordinates) {
+              detectedRestCoordinates = m.restaurantid.coordinates;
+            }
+          }
         }
       }
     } else if (req.body.menuid) {
-      const m = await menuSchema.findById(req.body.menuid);
+      const m = await menuSchema.findById(req.body.menuid).populate("restaurantid");
       calculatedSubtotal = (m ? m.price : req.body.price) * (req.body.quantity || 1);
+      if (m && m.restaurantid) {
+        detectedRestaurantId = m.restaurantid._id || m.restaurantid;
+        if (m.restaurantid.coordinates) {
+          detectedRestCoordinates = m.restaurantid.coordinates;
+        }
+      }
     }
 
     const deliveryFee = 60;
@@ -341,6 +344,7 @@ userrouter.post("/order/:id", authenticate, enforceOwnership("id"), async (req, 
 
     const finalTotal = Math.max(0, calculatedSubtotal + deliveryFee - discountAmount);
 
+    // Initial state: PLACED order, delivery NOT_REQUESTED, no rider assigned yet
     const orderData = {
       userid,
       menuid: req.body.menuid || (items[0] && items[0].menuid),
@@ -355,21 +359,35 @@ userrouter.post("/order/:id", authenticate, enforceOwnership("id"), async (req, 
       paymentmethod: req.body.paymentmethod || "COD",
       paymentStatus: req.body.paymentmethod === "Online" ? "Paid" : "Pending",
       address: req.body.address,
-      deliverypersonid,
-      status: "Preparing",
+      restaurantId: detectedRestaurantId,
+      restaurantCoordinates: detectedRestCoordinates,
+      customerCoordinates: req.body.coordinates || { lat: 12.9345, lng: 77.6256 },
+      // Strict decoupling: Delivery is NOT requested or assigned until restaurant accepts!
+      deliverypersonid: null,
+      orderStatus: "PLACED",
+      status: "Placed",
+      deliveryStatus: "NOT_REQUESTED",
+      deliveryLocation: {
+        lat: detectedRestCoordinates.lat,
+        lng: detectedRestCoordinates.lng,
+        updatedAt: new Date(),
+      },
       statusHistory: [
         {
-          status: "Preparing",
+          status: "Placed",
           timestamp: new Date(),
-          comment: "Order placed and assigned to kitchen.",
+          comment: "Order placed by customer. Waiting for kitchen acceptance.",
+          updatedBy: "customer",
+        },
+      ],
+      deliveryTimeline: [
+        {
+          status: "NOT_REQUESTED",
+          timestamp: new Date(),
+          comment: "Delivery not yet requested. Awaiting restaurant acceptance.",
           updatedBy: "system",
         },
       ],
-      deliveryLocation: {
-        lat: 12.9680,
-        lng: 77.5900,
-        updatedAt: new Date(),
-      },
     };
 
     const newOrder = await orderSchema.create(orderData);
@@ -377,21 +395,17 @@ userrouter.post("/order/:id", authenticate, enforceOwnership("id"), async (req, 
       .findById(newOrder._id)
       .populate("userid", "-password")
       .populate({ path: "menuid", populate: { path: "restaurantid" } })
-      .populate("deliverypersonid");
+      .populate("restaurantId");
 
-    const restaurantId = populatedOrder?.menuid?.restaurantid?._id;
+    const restaurantId = detectedRestaurantId || populatedOrder?.menuid?.restaurantid?._id;
 
-    // Scoped Real-time Events (Privacy protected rooms)
+    // Scoped Real-time Events
     if (req.io) {
       if (restaurantId) {
+        req.io.to(`restaurant_${restaurantId}`).emit("newKitchenOrder", populatedOrder);
         req.io.to(`restaurant_${restaurantId}`).emit("updatingRestOrder", [populatedOrder]);
       }
-      if (deliverypersonid) {
-        req.io.to(`delivery_${deliverypersonid}`).emit("updatingDelivery", [populatedOrder]);
-      }
       req.io.to(`user_${userid}`).emit("orderPlaced", populatedOrder);
-      // Legacy compatibility event
-      req.io.emit("newOrderBroadCast", { orderId: newOrder._id });
     }
 
     // Trigger transactional order confirmation email
@@ -399,13 +413,86 @@ userrouter.post("/order/:id", authenticate, enforceOwnership("id"), async (req, 
     sendOrderConfirmation(populatedOrder, userDoc);
 
     return res.status(200).json({
-      message: "Thank you for the Order ! Your Order will receive Soon ",
+      message: "Order placed successfully! Waiting for kitchen acceptance.",
       orderId: newOrder._id,
       order: populatedOrder,
     });
   } catch (err) {
     console.error("Order placement error:", err.message);
     return res.status(500).json({ message: "Server Error Try Again Later: " + err.message });
+  }
+});
+
+/**
+ * Customer Order Cancellation (Only allowed before restaurant accepts)
+ */
+userrouter.post("/order/cancel/:orderId", authenticate, async (req, res) => {
+  const { orderId } = req.params;
+  const reason = req.body?.reason || "Cancelled by customer";
+
+  try {
+    const order = await orderSchema.findById(orderId);
+    if (!order) return res.status(404).json({ message: "Order not found." });
+
+    if (order.userid?.toString() !== req.user.id && req.user.role !== "admin") {
+      return res.status(403).json({ message: "Forbidden: You do not own this order." });
+    }
+
+    if (order.orderStatus !== "PLACED") {
+      return res.status(400).json({
+        message: `Order cannot be cancelled because the kitchen has already accepted it (Current Status: ${order.orderStatus}). Please contact support.`,
+      });
+    }
+
+    const now = new Date();
+    order.orderStatus = "CANCELLED";
+    order.status = "Cancelled";
+    order.deliveryStatus = "CANCELLED";
+    order.rejectionReason = reason;
+
+    if (order.paymentmethod === "Online" && order.paymentStatus === "Paid") {
+      order.paymentStatus = "Refunded";
+    }
+
+    if (!order.statusHistory) order.statusHistory = [];
+    order.statusHistory.push({
+      status: "Cancelled",
+      timestamp: now,
+      comment: `Order cancelled by customer before restaurant acceptance: ${reason}`,
+      updatedBy: "customer",
+    });
+
+    if (!order.deliveryTimeline) order.deliveryTimeline = [];
+    order.deliveryTimeline.push({
+      status: "CANCELLED",
+      timestamp: now,
+      comment: "Delivery request cancelled.",
+      updatedBy: "customer",
+    });
+
+    await order.save();
+
+    if (order.couponCode) {
+      const couponModel = require("../../Models/CouponSchema");
+      await couponModel
+        .updateOne({ code: order.couponCode, timesUsed: { $gt: 0 } }, { $inc: { timesUsed: -1 } })
+        .catch(() => {});
+    }
+
+    if (req.io) {
+      req.io.to(`order_${orderId}`).emit("order:cancelled", { orderId, reason });
+      if (order.restaurantId) {
+        req.io.to(`restaurant_${order.restaurantId}`).emit("order:cancelled", { orderId, reason });
+      }
+    }
+
+    return res.status(200).json({
+      message: "Order cancelled successfully.",
+      order,
+    });
+  } catch (err) {
+    console.error("Cancel order error:", err.message, err.stack);
+    return res.status(500).json({ message: "Failed to cancel order: " + err.message });
   }
 });
 
@@ -419,6 +506,7 @@ userrouter.get("/orders/:id", authenticate, enforceOwnership("id"), async (req, 
     const result = await orderSchema
       .find({ userid: userid })
       .populate("userid", "-password")
+      .populate("restaurantId", "name address image")
       .populate({ path: "menuid", populate: { path: "restaurantid", select: "name address image" } })
       .populate("deliverypersonid")
       .sort({ createdAt: -1 });
@@ -439,6 +527,7 @@ userrouter.get("/order-tracking/:orderId", authenticate, async (req, res) => {
     const order = await orderSchema
       .findById(orderId)
       .populate("userid", "name email phonenumber address")
+      .populate("restaurantId", "name address coordinates image")
       .populate({ path: "menuid", populate: { path: "restaurantid", select: "name address coordinates image" } })
       .populate("deliverypersonid", "name phonenumber vehicleType rating");
 
@@ -447,30 +536,40 @@ userrouter.get("/order-tracking/:orderId", authenticate, async (req, res) => {
     }
 
     // Authorization: User must own the order or be an Admin, Restaurant owner, or Delivery partner
-    const isOwner = order.userid?._id?.toString() === req.user.id;
-    const isDelivery = order.deliverypersonid?._id?.toString() === req.user.id;
-    const isRest = order.menuid?.restaurantid?._id?.toString() === req.user.id;
+    const isOwner = order.userid?._id?.toString() === req.user.id || order.userid?.toString() === req.user.id;
+    const isDelivery = order.deliverypersonid?._id?.toString() === req.user.id || order.deliverypersonid?.toString() === req.user.id;
+    const isRest =
+      order.menuid?.restaurantid?._id?.toString() === req.user.id ||
+      order.restaurantId?._id?.toString() === req.user.id ||
+      order.restaurantId?.toString() === req.user.id;
     const isAdmin = req.user.role === "admin";
 
     if (!isOwner && !isDelivery && !isRest && !isAdmin) {
       return res.status(403).json({ message: "Forbidden: Not authorized to view tracking for this order." });
     }
 
+    const restData = order.restaurantId || order.menuid?.restaurantid;
+
     return res.status(200).json({
       orderId: order._id,
+      orderStatus: order.orderStatus || "PLACED",
+      deliveryStatus: order.deliveryStatus || "NOT_REQUESTED",
       status: order.status,
       statusHistory: order.statusHistory,
+      deliveryTimeline: order.deliveryTimeline,
       deliveryLocation: order.deliveryLocation,
       customerCoordinates: order.customerCoordinates,
-      restaurantCoordinates: order.restaurantCoordinates,
+      restaurantCoordinates: order.restaurantCoordinates || restData?.coordinates,
       estimatedDeliveryMinutes: order.estimatedDeliveryMinutes,
       isSimulated: order.isSimulated,
       address: order.address,
       paymentmethod: order.paymentmethod,
       totalAmount: order.totalAmount || order.price,
-      restaurant: order.menuid?.restaurantid,
+      restaurant: restData,
       deliveryPerson: order.deliverypersonid,
       item: order.menuid,
+      deliveryOtp: isOwner || isAdmin ? order.deliveryOtp : undefined,
+      rejectionReason: order.rejectionReason,
     });
   } catch (err) {
     return res.status(500).json({ message: "Error fetching tracking data: " + err.message });

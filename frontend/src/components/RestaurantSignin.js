@@ -1,206 +1,235 @@
-import React, { useState } from 'react';
-import api from '../config/api';
-import { useNavigate } from 'react-router-dom';
-import { ToastContainer, toast } from 'react-toastify';
+import React, { useState } from "react";
+import api from "../config/api";
+import { ToastContainer, toast } from "react-toastify";
 
-export default function RestaurantSignin() {
-  const navigate = useNavigate();
+export default function RestaurantSignin({ onSuccess }) {
+  const [user, setUser] = useState({
+    name: "",
+    email: "",
+    password: "",
+    phonenumber: "",
+    address: "",
+    city: "",
+    pincode: "",
+  });
 
-    const [user,setUser]=useState({
-        name:"",
-        email:"",
-        password:"",
-        phonenumber:"",
-        address:"",
-        city:"",
-        pincode:""
+  const [file, setFile] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-    })
+  const [errormsg, setErrormsg] = useState({
+    email: false,
+    password: false,
+    phonenumber: false,
+    pincode: false,
+  });
 
-    const [file,setFile]=useState(null);
+  const update = (event) => {
+    setUser({ ...user, [event.target.name]: event.target.value });
+  };
 
-    const [errormsg,setErrormsg]=useState({
-        email:false,
-        password:false,
-        phonenumber:false,
-        pincode:false
-    });
+  const fileupdate = (event) => {
+    setFile(event.target.files[0]);
+  };
 
-    const update=(event)=>{
-         setUser({...user,[event.target.name] : event.target.value})
+  const send = (event) => {
+    event.preventDefault();
+
+    const strongPasswordRegex =
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email)) {
+      return setErrormsg((prev) => ({ ...prev, email: true }));
+    } else {
+      setErrormsg((prev) => ({ ...prev, email: false }));
     }
 
-    const fileupdate=(event)=>{
-        setFile(event.target.files[0])
+    if (!strongPasswordRegex.test(user.password)) {
+      return setErrormsg((prev) => ({ ...prev, password: true }));
+    } else {
+      setErrormsg((prev) => ({ ...prev, password: false }));
     }
 
-    const send=(event)=>{
-           event.preventDefault();
-           
-           console.log(user);
-
-          const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-          
-          if( !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email) ){
-            return setErrormsg((prev)=>({...prev,email:true}))
-          }
-          else{
-             setErrormsg((prev)=>({...prev,email:false}))
-          }
-
-          if( !strongPasswordRegex.test(user.password) ){
-              return setErrormsg((prev)=>({...prev,password:true}))
-          }
-          else{
-             setErrormsg((prev)=>({...prev,password:false}))
-          }
-          
-          if( !/^\d{10}$/.test(user.phonenumber) ){
-              return setErrormsg((prev)=>({...prev,phonenumber:true}))
-          }
-          else{
-             setErrormsg((prev)=>({...prev,phonenumber:false}))
-          }
-
-          if (!/^\d{6}$/.test(user.pincode)) {
-            return setErrormsg((prev)=>({ ...prev, pincode: true }));
-          }
-          else{
-             setErrormsg((prev)=>({...prev,pincode:false}))
-          }
-        
-           const formdata= new FormData();
-           formdata.append("image",file);
-           formdata.append("name",user.name);
-           formdata.append("email",user.email)
-           formdata.append("password",user.password)
-           formdata.append("city",user.city)
-           formdata.append("pincode",user.pincode);
-           formdata.append("phonenumber",user.phonenumber)
-           formdata.append("address",user.address)
-
-
-           api.post("/restaurant/signin", formdata, { headers: { "Content-Type": "multipart/form-data" } })
-           .then((res) => {
-             toast.success(res.data.message || "Registration success!");
-             setTimeout(() => navigate("/restaurant/view"), 1500);
-           })
-           .catch((err) => { toast.error(err.response?.data?.message || "Registration failed"); });
+    if (!/^\d{10}$/.test(user.phonenumber)) {
+      return setErrormsg((prev) => ({ ...prev, phonenumber: true }));
+    } else {
+      setErrormsg((prev) => ({ ...prev, phonenumber: false }));
     }
+
+    if (!/^\d{6}$/.test(user.pincode)) {
+      return setErrormsg((prev) => ({ ...prev, pincode: true }));
+    } else {
+      setErrormsg((prev) => ({ ...prev, pincode: false }));
+    }
+
+    setLoading(true);
+    const formdata = new FormData();
+    formdata.append("image", file);
+    formdata.append("name", user.name);
+    formdata.append("email", user.email);
+    formdata.append("password", user.password);
+    formdata.append("city", user.city);
+    formdata.append("pincode", user.pincode);
+    formdata.append("phonenumber", user.phonenumber);
+    formdata.append("address", user.address);
+
+    api
+      .post("/restaurant/signin", formdata, {
+        headers: { "Content-Type": "multipart/form-data" },
+      })
+      .then((res) => {
+        setLoading(false);
+        toast.success(res.data.message || "Registration successful! You can now log in.");
+        if (onSuccess) onSuccess();
+      })
+      .catch((err) => {
+        setLoading(false);
+        toast.error(err.response?.data?.message || "Registration failed");
+      });
+  };
 
   return (
-    <div className="login-page d-flex align-items-center rounded-top-4 py-5" style={{ minHeight: "100vh" }}>
-      <div className="container">
-        <div className="row align-items-center">
-
-          {/* Left Side Content */}
-          <div className="col-md-6 text-white p-4">
-            <h1 className="fw-bold display-5">Join CraveCart </h1>
-            <p className="lead mt-3">
-              Expand your restaurant reach by joining our platform.  
-              Deliver food to thousands of hungry customers nearby and grow your business with ease.
-            </p>
-            <ul className="mt-4">
-              <li> Get discovered by new customers</li>
-              <li> Easy-to-use partner dashboard</li>
-              <li> Increase revenue with online orders</li>
-            </ul>
-          </div>
-
-          <div className="col-md-6">
-            <div className="p-2 d-flex justify-content-center">
-              <form onSubmit={send} className="w-100 p-3 border rounded-3 shadow-lg bg-light">
-                <h2 className="p-2 text-center">Restaurant's Signin</h2>
-                <hr />
-                <div class="mb-3">
-                  <label class="form-label">Restaurant Name</label>
-                  <input type="text" class="form-control" placeholder="Ex: Mahesh" onChange={update} name="name" required />
-                </div>
-
-                <div class="mb-3">
-                  <label class="form-label">Restaurant Image</label>
-                  <input type="file" class="form-control" onChange={fileupdate} name="image" required />
-                </div>
-
-                <div class="mb-3">
-                  <label class="form-label">Email</label>
-                  <input type="email" class="form-control" placeholder="Ex: Sample@gmail.com" onChange={update} name="email" required />
-                  {errormsg.email ? <div style={{ color: "red" }} class="form-text">*Enter a Valid Email.</div> : <div></div>}
-                </div>
-
-                <div class="mb-3">
-                  <label class="form-label">Password</label>
-                  <input type="password" class="form-control" placeholder="****" onChange={update} name="password" required />
-                  {errormsg.password ? <div style={{ color: "red" }} class="form-text">*Password must be 8+ chars with uppercase, lowercase, number & special character.</div> : <div></div>}
-                </div>
-
-                <div class="mb-3">
-                  <label class="form-label">Phone Number</label>
-                  <input type="number" class="form-control" placeholder="Ex: 7865342376" onChange={update} name="phonenumber" required />
-                  {errormsg.phonenumber ? <div style={{ color: "red" }} class="form-text">*PhoneNumber Contains 10 digits Only.</div> : <div></div>}
-                </div>
-
-                <div class="mb-3">
-                  <label class="form-label">Address</label>
-                  <textarea class="form-control" onChange={update} name="address" required></textarea>
-                </div>
-
-                <div class="mb-3">
-                  <label class="form-label">City</label>
-                  <input type="text" class="form-control" placeholder="Ex: Madurai" onChange={update} name="city" required />
-                </div>
-
-                <div class="mb-3">
-                  <label class="form-label">Pincode</label>
-                  <input type="number" class="form-control" placeholder="Ex: 625532" onChange={update} name="pincode" required />
-                  {errormsg.pincode ? <div style={{ color: "red" }} class="form-text">*Enter a Valid Pincode.</div> : <div></div>}
-                </div>
-
-                <button type="submit" class="btn btn-primary w-100">Submit</button>
-              </form>
-            </div>
-          </div>
+    <div className="card border-0 shadow-xs rounded-4 bg-white p-4 p-md-5">
+      <div className="text-center mb-4">
+        <div className="mx-auto text-primary mb-2 p-3 bg-primary bg-opacity-10 rounded-circle d-inline-flex">
+          <i className="bi bi-file-earmark-plus fs-2"></i>
         </div>
+        <h3 className="fw-bold font-heading text-dark mb-1">Partner Kitchen Onboarding</h3>
+        <p className="text-muted small">Register your restaurant and begin reaching hungry local foodies</p>
       </div>
 
-      <ToastContainer 
-    className="custom-toast"
-    autoClose={3000} 
-  />
+      <form onSubmit={send}>
+        <div className="row g-3">
+          <div className="col-12 col-md-6">
+            <label className="crave-label">Restaurant Brand Name</label>
+            <input
+              type="text"
+              className="crave-input"
+              placeholder="e.g. Empire Spice Kitchen"
+              name="name"
+              value={user.name}
+              onChange={update}
+              required
+            />
+          </div>
 
-      {/* Inline styles */}
-      <style>{`
-        .login-page {
-          background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)),
-                      url("https://images.unsplash.com/photo-1600891964599-f61ba0e24092?auto=format&fit=crop&w=1600&q=80")
-                      no-repeat center center/cover;
-        }
+          <div className="col-12 col-md-6">
+            <label className="crave-label">Business Email</label>
+            <input
+              type="email"
+              className={`crave-input ${errormsg.email ? "border-danger" : ""}`}
+              placeholder="partner@restaurant.com"
+              name="email"
+              value={user.email}
+              onChange={update}
+              required
+            />
+            {errormsg.email && <small className="text-danger">Invalid email format</small>}
+          </div>
 
-        .custom-toast {
-      top: 80px !important;
-      left: 75% !important;
-      right: auto !important;
-      width: 320px !important;
-    }
+          <div className="col-12 col-md-6">
+            <label className="crave-label">Kitchen Banner Image</label>
+            <input
+              type="file"
+              className="crave-input"
+              name="image"
+              accept="image/*"
+              onChange={fileupdate}
+              required
+            />
+          </div>
 
-    /* Tablet */
-    @media (max-width: 1024px) {
-      .custom-toast {
-        left: 65% !important;
-        width: 280px !important;
-      }
-    }
+          <div className="col-12 col-md-6">
+            <label className="crave-label">Phone Contact (10 digits)</label>
+            <input
+              type="tel"
+              className={`crave-input ${errormsg.phonenumber ? "border-danger" : ""}`}
+              placeholder="9876543210"
+              name="phonenumber"
+              value={user.phonenumber}
+              onChange={update}
+              required
+            />
+            {errormsg.phonenumber && <small className="text-danger">Must be a 10-digit number</small>}
+          </div>
 
-    /* Mobile */
-    @media (max-width: 600px) {
-      .custom-toast {
-        left: 50% !important;
-        transform: translateX(-50%) !important;
-        width: 90% !important;
-        max-width: 300px !important;
-      }
-    }
-      `}</style>
+          <div className="col-12">
+            <label className="crave-label">Kitchen Pickup Address</label>
+            <input
+              type="text"
+              className="crave-input"
+              placeholder="Complete street address & locality"
+              name="address"
+              value={user.address}
+              onChange={update}
+              required
+            />
+          </div>
+
+          <div className="col-12 col-md-6">
+            <label className="crave-label">City</label>
+            <input
+              type="text"
+              className="crave-input"
+              placeholder="Bangalore"
+              name="city"
+              value={user.city}
+              onChange={update}
+              required
+            />
+          </div>
+
+          <div className="col-12 col-md-6">
+            <label className="crave-label">Postal Pincode</label>
+            <input
+              type="text"
+              className={`crave-input ${errormsg.pincode ? "border-danger" : ""}`}
+              placeholder="560001"
+              name="pincode"
+              value={user.pincode}
+              onChange={update}
+              required
+            />
+            {errormsg.pincode && <small className="text-danger">Must be 6 digits</small>}
+          </div>
+
+          <div className="col-12">
+            <label className="crave-label">Secure Password</label>
+            <input
+              type="password"
+              className={`crave-input ${errormsg.password ? "border-danger" : ""}`}
+              placeholder="Min 8 chars, 1 uppercase, 1 digit, 1 special symbol"
+              name="password"
+              value={user.password}
+              onChange={update}
+              required
+            />
+            {errormsg.password && (
+              <small className="text-danger">
+                Password must have at least 8 characters, 1 uppercase, 1 lowercase, 1 number, and 1 special symbol.
+              </small>
+            )}
+          </div>
+
+          <div className="col-12 mt-4">
+            <button
+              type="submit"
+              className="btn btn-crave-primary w-100 py-3 font-heading"
+              disabled={loading}
+            >
+              {loading ? (
+                <span>
+                  <span className="spinner-border spinner-border-sm me-2" />
+                  Submitting Application...
+                </span>
+              ) : (
+                "Submit Restaurant Application"
+              )}
+            </button>
+          </div>
+        </div>
+      </form>
+
+      <ToastContainer position="top-right" autoClose={3000} />
     </div>
-  )
+  );
 }

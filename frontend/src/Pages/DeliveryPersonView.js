@@ -6,228 +6,209 @@ import { ToastContainer, toast } from "react-toastify";
 import DeliveryNavbar from "../components/DeliveryNavbar";
 
 export default function DeliveryPersonView() {
-   
-    const navigate = useNavigate();
+  const navigate = useNavigate();
+  const deliverypersonid = localStorage.getItem("id");
 
-    const deliverypersonid=localStorage.getItem("id")
+  const [delperson, setDelperson] = useState({
+    _id: "",
+    id: "",
+    name: "",
+    email: "",
+    password: "",
+    address: "",
+    phonenumber: "",
+    vehicleType: "Electric Bike",
+    rating: 4.8,
+  });
 
-    const [delperson,setDelperson]=useState({
-        _id:"",
-        id:"",
-        name:"",
-        email:"",
-        password:"",
-        address:"",
-        phonenumber:""
-    })
+  const [errormsg, setErrormsg] = useState({
+    phonenumber: false,
+  });
 
-    const [errormsg,setErrormsg]=useState({
+  useEffect(() => {
+    if (deliverypersonid) {
+      api
+        .get("/delivery/view/" + deliverypersonid)
+        .then((res) => setDelperson({ ...res.data }))
+        .catch((err) =>
+          toast.error("Network Error " + (err.response?.data?.message || err.message))
+        );
+    }
+  }, [deliverypersonid]);
 
-         phonenumber : false
-        });
+  const update = (event) => {
+    setDelperson({ ...delperson, [event.target.name]: event.target.value });
+  };
 
-    useEffect(()=>{
-        if (deliverypersonid) {
-          api.get("/delivery/view/"+deliverypersonid)
-          .then((res)=>setDelperson({...res.data}))
-          .catch((err)=>toast.error("Network Error "+ (err.response?.data?.message || err.message)));
-        }
-    },[deliverypersonid])
+  const handleupdate = (eve) => {
+    eve.preventDefault();
 
-    const update=(event)=>{
-      setDelperson({...delperson,[event.target.name]:event.target.value})
+    if (!/^\d{10}$/.test(delperson.phonenumber)) {
+      return setErrormsg((prev) => ({ ...prev, phonenumber: true }));
+    } else {
+      setErrormsg((prev) => ({ ...prev, phonenumber: false }));
     }
 
-    const handleupdate=(eve)=>{
-         eve.preventDefault();
-
-          if( !/^\d{10}$/.test(delperson.phonenumber) ){
-              return setErrormsg((prev)=>({...prev,phonenumber:true}))
-          }
-          else{
-             setErrormsg((prev)=>({...prev,phonenumber:false}))
-          }
-         
-         api.put("/delivery/update/"+deliverypersonid, delperson)
-        .then((res)=>{
-          toast.success(res.data.message);
-          localStorage.removeItem("id");
-          localStorage.removeItem("token");
-          localStorage.removeItem("role");
-          setTimeout(()=>navigate("/delivery"),1500)
-        })
-        .catch((err)=>toast.error("Network Error "+ (err.response?.data?.message || err.message)))
-
-    }
+    api
+      .put("/delivery/update/" + deliverypersonid, delperson)
+      .then((res) => {
+        toast.success(res.data.message || "Profile updated! Please re-login.");
+        localStorage.removeItem("id");
+        localStorage.removeItem("token");
+        localStorage.removeItem("role");
+        setTimeout(() => navigate("/delivery"), 1500);
+      })
+      .catch((err) =>
+        toast.error("Network Error: " + (err.response?.data?.message || err.message))
+      );
+  };
 
   return (
-    <div>
-  <DeliveryNavbar></DeliveryNavbar>
+    <div className="bg-light min-vh-100 d-flex flex-column">
+      <DeliveryNavbar />
 
-  <div class="container mt-4 pt-3">
-    <div class="row mt-5">
-      <form onSubmit={handleupdate}>
-        <div class="col-12 mb-4">
-          <div class="card p-3 shadow-sm border rounded animate-card">
-            <h5 class="mb-3 animate-title">Delivery Person Details</h5>
-            <hr></hr>
-            <div class="mb-2 animate-input">
-              <label class="form-label d-none fw-bold">ID</label>
-              <input
-                type="text"
-                name="_id"
-                class="form-control d-none"
-                value={delperson._id}
-                readonly
-              />
+      <div className="container py-5 flex-grow-1">
+        <div className="row g-4">
+          {/* Driver Fleet Identity Card */}
+          <div className="col-12 col-lg-4">
+            <div className="card border-0 shadow-xs rounded-4 p-4 text-center bg-white crave-card">
+              <div
+                className="rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center shadow-sm"
+                style={{
+                  width: "90px",
+                  height: "90px",
+                  background: "linear-gradient(135deg, #2563EB 0%, #3B82F6 100%)",
+                  color: "#FFFFFF",
+                  fontSize: "36px",
+                  fontWeight: "bold",
+                }}
+              >
+                <i className="bi bi-bicycle"></i>
+              </div>
+              <h4 className="fw-bold font-heading text-dark mb-1">{delperson.name || "Fleet Partner"}</h4>
+              <p className="text-muted small mb-3">{delperson.email}</p>
+
+              <div className="d-flex justify-content-center gap-2 mb-3">
+                <span className="badge rounded-pill bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-1 font-heading small">
+                  <i className="bi bi-shield-check me-1"></i> Active Fleet Member
+                </span>
+                <span className="badge rounded-pill bg-warning bg-opacity-10 text-dark border border-warning border-opacity-25 px-3 py-1 font-heading small">
+                  <i className="bi bi-star-fill text-warning me-1"></i> 4.8 Rating
+                </span>
+              </div>
+
+              <hr className="my-4" />
+
+              <div className="text-start small text-muted">
+                <div className="d-flex align-items-center gap-2 mb-2">
+                  <i className="bi bi-person-badge text-primary"></i>
+                  <span>Partner ID: <strong>{delperson.id || delperson._id?.slice(-6).toUpperCase()}</strong></span>
+                </div>
+                <div className="d-flex align-items-center gap-2 mb-2">
+                  <i className="bi bi-telephone text-success"></i>
+                  <span>{delperson.phonenumber || "No phone registered"}</span>
+                </div>
+                <div className="d-flex align-items-center gap-2 mb-2">
+                  <i className="bi bi-geo-alt text-danger"></i>
+                  <span>{delperson.address || "Base Operations Zone"}</span>
+                </div>
+              </div>
             </div>
-            <div class="mb-2 animate-input">
-              <label class="form-label fw-bold">Allocated ID</label>
-              <input
-                type="text"
-                name="id"
-                class="form-control"
-                value={delperson.id}
-                readonly
-              />
-            </div>
-            <div class="mb-2 animate-input">
-              <label class="form-label fw-bold">Name</label>
-              <input
-                type="text"
-                class="form-control"
-                name="name"
-                value={delperson.name}
-                onChange={update}
-                required
-              />
-            </div>
-            <div class="mb-2 animate-input">
-              <label class="form-label fw-bold">Email</label>
-              <input
-                type="email"
-                name="email"
-                class="form-control"
-                value={delperson.email}
-                readonly
-              />
-            </div>
-            <div class="mb-2 animate-input">
-              <label class="form-label fw-bold">Password</label>
-              <input
-                type="password"
-                class="form-control"
-                name="password"
-                value={delperson.password}
-                onChange={update}
-                required
-              />
-            </div>
-            <div class="animate-input">
-              <label class="form-label fw-bold">Phone Number</label>
-              <input
-                type="number"
-                class="form-control"
-                name="phonenumber"
-                value={delperson.phonenumber}
-                onChange={update}
-                required
-              />
-              {errormsg.phonenumber ? <div style={{color:"red"}} class="form-text">*PhoneNumber Contains 10 digits Only.</div> : <div></div>}
-            </div>
-            <div class="animate-input">
-              <label class="form-label fw-bold">Address</label>
-              <input
-                type="text"
-                class="form-control"
-                name="address"
-                value={delperson.address}
-                onChange={update}
-                required
-              />
-            </div>
-            <div className="my-3 d-flex justify-content-end">
-              <button className="btn btn-primary animate-button" type="submit">Update Details</button>
+          </div>
+
+          {/* Form Settings Card */}
+          <div className="col-12 col-lg-8">
+            <div className="card border-0 shadow-xs rounded-4 p-4 p-md-5 bg-white">
+              <div className="d-flex align-items-center gap-2 mb-4">
+                <span className="badge rounded-circle bg-primary bg-opacity-10 text-primary p-2">
+                  <i className="bi bi-gear-fill fs-5"></i>
+                </span>
+                <div>
+                  <h3 className="mb-0 fw-bold font-heading text-dark">Driver Account Settings</h3>
+                  <small className="text-muted">Update contact information, emergency phone, and vehicle base</small>
+                </div>
+              </div>
+
+              <form onSubmit={handleupdate}>
+                <div className="row g-3">
+                  <div className="col-12 col-md-6">
+                    <label className="crave-label">Rider Full Name</label>
+                    <input
+                      type="text"
+                      className="crave-input"
+                      name="name"
+                      value={delperson.name}
+                      onChange={update}
+                      required
+                    />
+                  </div>
+
+                  <div className="col-12 col-md-6">
+                    <label className="crave-label">Fleet Email</label>
+                    <input
+                      type="email"
+                      className="crave-input bg-light"
+                      name="email"
+                      value={delperson.email}
+                      readOnly
+                    />
+                  </div>
+
+                  <div className="col-12 col-md-6">
+                    <label className="crave-label">Mobile Contact (10 digits)</label>
+                    <input
+                      type="tel"
+                      className={`crave-input ${errormsg.phonenumber ? "border-danger" : ""}`}
+                      name="phonenumber"
+                      value={delperson.phonenumber}
+                      onChange={update}
+                      required
+                    />
+                    {errormsg.phonenumber && (
+                      <small className="text-danger mt-1 d-block">
+                        Please enter a valid 10-digit phone number.
+                      </small>
+                    )}
+                  </div>
+
+                  <div className="col-12 col-md-6">
+                    <label className="crave-label">Password</label>
+                    <input
+                      type="password"
+                      className="crave-input"
+                      name="password"
+                      placeholder="Leave unchanged or enter new"
+                      value={delperson.password}
+                      onChange={update}
+                    />
+                  </div>
+
+                  <div className="col-12">
+                    <label className="crave-label">Home Base / Delivery Operating Address</label>
+                    <textarea
+                      className="crave-input"
+                      rows="3"
+                      name="address"
+                      value={delperson.address}
+                      onChange={update}
+                      required
+                    />
+                  </div>
+
+                  <div className="col-12 mt-4">
+                    <button type="submit" className="btn btn-crave-primary rounded-pill px-5 py-2 font-heading">
+                      Save Driver Settings
+                    </button>
+                  </div>
+                </div>
+              </form>
             </div>
           </div>
         </div>
-      </form>
+      </div>
+
+      <ToastContainer position="top-right" autoClose={3000} />
+      <Footer />
     </div>
-  </div>
-
-   <ToastContainer 
-    className="custom-toast"
-    autoClose={3000} 
-  />
-
-  <Footer></Footer>
-
-  {/* Inline CSS for animations and professional look */}
-  <style>{`
-    .animate-card {
-      transition: transform 0.5s ease, box-shadow 0.5s ease;
-    }
-    .animate-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 15px 35px rgba(0,0,0,0.2);
-    }
-
-    .animate-title {
-      animation: fadeInDown 1s ease forwards;
-      opacity: 0;
-    }
-
-    .animate-input {
-      animation: fadeInUp 0.8s ease forwards;
-      opacity: 0;
-      margin-bottom: 15px;
-    }
-
-    .animate-button {
-      transition: transform 0.3s ease, background-color 0.3s ease;
-    }
-    .animate-button:hover {
-      transform: scale(1.05);
-      background-color: #0069d9;
-    }
-
-    @keyframes fadeInDown {
-      0% { opacity: 0; transform: translateY(-20px); }
-      100% { opacity: 1; transform: translateY(0); }
-    }
-
-    @keyframes fadeInUp {
-      0% { opacity: 0; transform: translateY(20px); }
-      100% { opacity: 1; transform: translateY(0); }
-    }
-
-    .custom-toast {
-      top: 80px !important;
-      left: 75% !important;
-      right: auto !important;
-      width: 320px !important;
-    }
-
-    /* Tablet */
-    @media (max-width: 1024px) {
-      .custom-toast {
-        left: 65% !important;
-        width: 280px !important;
-      }
-    }
-
-    /* Mobile */
-    @media (max-width: 600px) {
-      .custom-toast {
-        left: 50% !important;
-        transform: translateX(-50%) !important;
-        width: 90% !important;
-        max-width: 300px !important;
-      }
-    }
-
-  `}</style>
-</div>
-
   );
 }

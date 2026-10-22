@@ -31,6 +31,12 @@ const io = new Server(server, {
 // Setup scoped rooms and tracking engine
 initSocketIO(io);
 
+const { checkAndExpireOffers } = require("./services/delivery.service");
+// Background sweeper to expire timed-out delivery offers and auto-redispatch
+setInterval(() => {
+  checkAndExpireOffers(io).catch(() => {});
+}, 8000);
+
 // Static uploads directory
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
@@ -66,7 +72,10 @@ app.use("/delivery", deliveryroute);
 app.use("/admin", adminRoute);
 app.use("/api/chat", chatRouter);
 app.use("/payment", paymentRouter);
+app.use("/api/payment", paymentRouter);
+app.use("/api/payments", paymentRouter);
 app.use("/coupons", couponRouter);
+app.use("/api/coupons", couponRouter);
 
 // 404 Route Handler
 app.use((req, res) => {

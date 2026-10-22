@@ -1,106 +1,101 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import CraveCartLogo from "./CraveCartLogo";
 
 const DeliveryNavbar = () => {
-
-    const [isAuth,setIsAuth] = useState(Boolean(localStorage.getItem("token") && localStorage.getItem("role") === "deliveryperson")) 
+  const location = useLocation();
+  const [isAuth, setIsAuth] = useState(
+    Boolean(localStorage.getItem("token") && localStorage.getItem("role") === "deliveryperson")
+  );
 
   return (
-    <nav className="navbar navbar-expand-lg rounded-bottom-5 fixed-top bg-white shadow-sm px-3">
+    <nav
+      className="navbar navbar-expand-lg sticky-top border-bottom px-3 py-2"
+      style={{
+        backgroundColor: "rgba(255, 255, 255, 0.95)",
+        backdropFilter: "blur(14px)",
+        WebkitBackdropFilter: "blur(14px)",
+        borderColor: "var(--border-subtle)",
+        boxShadow: "0 2px 12px rgba(15, 23, 42, 0.04)",
+        zIndex: 1030,
+      }}
+    >
       <div className="container-fluid d-flex justify-content-between align-items-center">
-        {/* Brand Logo */}
-        <Link to="/" className="navbar-brand d-flex align-items-center">
-          {/* Replace with Swiggy logo */}
-          <svg
-            width="35"
-            height="35"
-            viewBox="0 0 100 100"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            className="me-2"
-          >
-            <circle cx="50" cy="50" r="48" fill="#FF6F00" />
-            <text
-              x="50"
-              y="58"
-              textAnchor="middle"
-              fontSize="40"
-              fill="#fff"
-              fontFamily="sans-serif"
-            >
-              C
-            </text>
-          </svg>
-          <span className="fw-bold text-dark">CraveCart</span>
-        </Link>
-
-        <ul class="navbar-nav ms-auto d-flex me-2 flex-row order-1 ">
-            
-                    { !isAuth ? (
-                          
-                       <li className="nav-item">
-              <Link to="/delivery" className="btn btn-secondary rounded-pill px-3">
-                Log In
-              </Link>
-            </li>
-        
-                    ):(
-                     <li className="nav-item">
-              <Link to="/delivery/order" className="nav-link fw-semibold">
-                Orders
-              </Link>
-            </li>
-                    )}
-                    
-               </ul>
+        {/* Brand Logo with Delivery Partner Badge */}
+        <div className="d-flex align-items-center gap-2">
+          <CraveCartLogo size="md" clickable={true} to="/delivery/order" />
+          <span className="badge rounded-pill bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 py-1 px-2 d-none d-sm-inline-flex align-items-center gap-1 font-heading">
+            <i className="bi bi-bicycle"></i> Driver Fleet
+          </span>
+        </div>
 
         {/* Toggler for mobile */}
         <button
-          className="navbar-toggler order-2 "
+          className="navbar-toggler border-0 shadow-none p-1 text-dark"
           type="button"
           data-bs-toggle="collapse"
-          data-bs-target="#navbarNav"
-          aria-controls="navbarNav"
+          data-bs-target="#deliveryNav"
+          aria-controls="deliveryNav"
           aria-expanded="false"
           aria-label="Toggle navigation"
         >
-          <span className="navbar-toggler-icon"></span>
+          <i className="bi bi-list fs-2 text-dark"></i>
         </button>
 
         {/* Navbar Links */}
-        <div className="collapse navbar-collapse mx-auto" id="navbarNav">
- 
-          <ul className="navbar-nav ms-auto align-items-center gap-2">
-           { !isAuth  ? (
-            <>
-            
-            <li className="nav-item">
-              <Link to="/delivery" className="btn btn-outline-secondary rounded-pill px-3">
-                Sign In
-              </Link>
-            </li>
-             
-            </>
-
+        <div className="collapse navbar-collapse" id="deliveryNav">
+          <ul className="navbar-nav ms-auto align-items-center gap-2 my-2 my-lg-0">
+            {!isAuth ? (
+              <>
+                <li className="nav-item">
+                  <Link
+                    to="/delivery"
+                    className="btn btn-sm btn-crave-secondary rounded-pill px-4"
+                  >
+                    Partner Log In
+                  </Link>
+                </li>
+              </>
             ) : (
-
-            <>
-            
-            <li className="nav-item">
-              <Link to="/delivery/view" className="nav-link fw-semibold">
-                Profile
-              </Link>
-            </li>
-             <li className="text-decoration-none">
-                <Link class="btn btn-outline-danger rounded-pill px-3" to="/delivery/logout" 
-                onClick={ ()=>{ 
-                    setIsAuth(false) ; 
-                 } }>Logout</Link>
-            </li>
-            </>
- 
+              <>
+                <li className="nav-item">
+                  <Link
+                    to="/delivery/order"
+                    className={`nav-link fw-semibold px-3 py-2 rounded-pill transition-all d-flex align-items-center gap-1 ${
+                      location.pathname === "/delivery/order"
+                        ? "text-primary bg-light"
+                        : "text-secondary"
+                    }`}
+                  >
+                    <i className="bi bi-box-seam"></i> Live Trips
+                  </Link>
+                </li>
+                <li className="nav-item">
+                  <Link
+                    to="/delivery/view"
+                    className={`nav-link fw-semibold px-3 py-2 rounded-pill transition-all d-flex align-items-center gap-1 ${
+                      location.pathname === "/delivery/view"
+                        ? "text-primary bg-light"
+                        : "text-secondary"
+                    }`}
+                  >
+                    <i className="bi bi-person-badge"></i> Partner Profile
+                  </Link>
+                </li>
+                <li className="nav-item ms-lg-2">
+                  <Link
+                    className="btn btn-sm btn-outline-danger rounded-pill px-3 py-1 d-inline-flex align-items-center gap-1 fw-semibold"
+                    to="/delivery/logout"
+                    onClick={() => {
+                      setIsAuth(false);
+                    }}
+                  >
+                    <i className="bi bi-box-arrow-right"></i> Sign Out
+                  </Link>
+                </li>
+              </>
             )}
-            </ul>
+          </ul>
         </div>
       </div>
     </nav>

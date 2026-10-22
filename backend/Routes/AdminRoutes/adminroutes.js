@@ -140,4 +140,112 @@ adminRoute.patch("/restaurant/:id/toggle", authenticate, authorizeRoles("admin")
   }
 });
 
+/**
+ * Admin Delivery Dispatch Operations Monitor
+ */
+adminRoute.get("/deliveries", authenticate, authorizeRoles("admin"), async (req, res) => {
+  try {
+    const orders = await orderSchema
+      .find({
+        orderStatus: { $in: ["PLACED", "ACCEPTED", "PREPARING", "READY_FOR_PICKUP", "PICKED_UP"] },
+      })
+      .populate("restaurantId", "name address coordinates")
+      .populate({ path: "menuid", populate: { path: "restaurantid" } })
+      .populate("userid", "name phonenumber address")
+      .populate("deliverypersonid", "name phonenumber vehicleType rating currentLocation")
+      .sort({ createdAt: -1 });
+
+    const activeDrivers = await deliverySchema.find({ isAvailable: true }).select("-password");
+
+    const searching = orders.filter((o) => o.deliveryStatus === "SEARCHING" || o.deliveryStatus === "NOT_REQUESTED");
+    const offered = orders.filter((o) => o.deliveryStatus === "OFFERED");
+    const inTransit = orders.filter((o) => ["ASSIGNED", "ARRIVED_AT_RESTAURANT", "PICKED_UP", "OUT_FOR_DELIVERY"].includes(o.deliveryStatus));
+
+    const summary = {
+      totalActive: orders.length,
+      searchingCount: searching.length,
+      offeredCount: offered.length,
+      inTransitCount: inTransit.length,
+      onlineDriversCount: activeDrivers.length,
+    };
+
+    return res.status(200).json({
+      summary,
+      stats: summary,
+      deliveries: orders,
+      searching,
+      offered,
+      inTransit,
+      onlineDrivers: activeDrivers,
+    });
+  } catch (err) {
+    return res.status(500).json({ message: "Failed to fetch delivery monitor data: " + err.message });
+  }
+});
+
+/**
+ * Admin Delivery Manual Reassignment & Override
+ */
+adminRoute.post("/deliveries/:orderId/reassign", authenticate, authorizeRoles("admin"), async (req, res) => {
+  const { orderId } = req.params;
+  const { partnerId, reason = "Administrative reassignment" } = req.body;
+
+  try {
+    const order = await orderSchema.findById(orderId);
+    if (!order) return res.status(404).json({ message: "Order not found." });
+
+    if (["DELIVERED", "CANCELLED", "REJECTED"].includes(order.orderStatus)) {
+      return res.status(400).json({ message: "Cannot reassign order in terminal state: " + order.orderStatus });
+    }
+
+    const now = new Date();
+    if (partnerId) {
+      const partner = await deliverySchema.findById(partnerId);
+      if (!partner) return res.status(404).json({ message: "Target delivery partner not found." });
+
+      order.deliverypersonid = partner._id;
+      order.deliveryStatus = "ASSIGNED";
+      order.deliveryOffer = {
+        deliveryPartnerId: partner._id,
+        offerCreatedAt: now,
+        offerExpiresAt: now,
+        offerState: "ACCEPTED",
+      };
+      order.deliveryTimeline.push({
+        status: "ASSIGNED",
+        timestamp: now,
+        comment: `Admin manually assigned delivery to ${partner.name}. Reason: ${reason}`,
+        updatedBy: "admin",
+      });
+
+      await order.save();
+
+      if (req.io) {
+        req.io.to(`delivery_${partner._id}`).emit("delivery:assigned", { orderId, order });
+        req.io.to(`order_${orderId}`).emit("delivery:assigned", { orderId, order });
+      }
+
+      return res.status(200).json({ message: `Order successfully assigned to ${partner.name}`, order });
+    } else {
+      // Re-trigger automated candidate search
+      const { dispatchNextCandidate } = require("../../services/delivery.service");
+      order.deliveryStatus = "SEARCHING";
+      order.deliverypersonid = null;
+      order.deliveryTimeline.push({
+        status: "SEARCHING",
+        timestamp: now,
+        comment: `Admin reset delivery to automated search. Reason: ${reason}`,
+        updatedBy: "admin",
+      });
+      await order.save();
+
+      dispatchNextCandidate(order._id, req.io).catch(() => {});
+
+      return res.status(200).json({ message: "Automated delivery search re-initiated", order });
+    }
+  } catch (err) {
+    return res.status(500).json({ message: "Failed to reassign delivery: " + err.message });
+  }
+});
+
 module.exports = adminRoute;

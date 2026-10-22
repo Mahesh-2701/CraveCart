@@ -7,6 +7,7 @@ const orderSchema = require("../../Models/OrderSchema");
 const { signToken } = require("../../config/auth.config");
 const { authenticate, authorizeRoles } = require("../../middleware/auth.middleware");
 const { sendStatusUpdate } = require("../../services/email.service");
+const { dispatchNextCandidate } = require("../../services/delivery.service");
 
 const restRoute = express.Router();
 restRoute.use(express.json());
@@ -186,12 +187,16 @@ restRoute.get("/order/:id", authenticate, async (req, res) => {
     const orders = await orderSchema
       .find()
       .populate({ path: "menuid", populate: { path: "restaurantid" } })
+      .populate("restaurantId")
       .populate("userid", "-password")
-      .populate("deliverypersonid")
+      .populate("deliverypersonid", "-password")
       .sort({ createdAt: -1 });
 
     const restaurantOrders = orders.filter(
-      (order) => order?.menuid?.restaurantid?._id?.toString() === restaurantid.toString()
+      (order) =>
+        order?.menuid?.restaurantid?._id?.toString() === restaurantid.toString() ||
+        order?.restaurantId?._id?.toString() === restaurantid.toString() ||
+        order?.restaurantId?.toString() === restaurantid.toString()
     );
 
     return res.status(200).json(restaurantOrders);
@@ -201,58 +206,227 @@ restRoute.get("/order/:id", authenticate, async (req, res) => {
 });
 
 /**
- * Order Status Change
+ * Restaurant Action 1: Accept Order
+ * Transitions order to ACCEPTED/PREPARING and triggers Delivery Candidate Discovery!
+ */
+restRoute.post("/order/:id/accept", authenticate, async (req, res) => {
+  const orderId = req.params.id;
+
+  try {
+    const order = await orderSchema.findById(orderId).populate("userid", "-password");
+    if (!order) return res.status(404).json({ message: "Order not found." });
+
+    if (["CANCELLED", "REJECTED", "DELIVERED"].includes(order.orderStatus)) {
+      return res.status(400).json({ message: `Cannot accept order in terminal status: ${order.orderStatus}` });
+    }
+
+    const now = new Date();
+    order.orderStatus = "ACCEPTED";
+    order.status = "Preparing";
+    order.deliveryStatus = "SEARCHING";
+
+    if (!order.statusHistory) order.statusHistory = [];
+    order.statusHistory.push({
+      status: "Accepted",
+      timestamp: now,
+      comment: "Kitchen accepted the order and started preparation.",
+      updatedBy: "restaurant",
+    });
+
+    if (!order.deliveryTimeline) order.deliveryTimeline = [];
+    order.deliveryTimeline.push({
+      status: "SEARCHING",
+      timestamp: now,
+      comment: "Order accepted by kitchen. Searching for nearby delivery partners.",
+      updatedBy: "system",
+    });
+
+    await order.save();
+
+    // Notify rooms
+    if (req.io) {
+      req.io.to(`order_${orderId}`).emit("order:accepted", { orderId, orderStatus: "ACCEPTED", status: "Preparing" });
+      req.io.to(`user_${order.userid?._id || order.userid}`).emit("orderStatusChanged", order);
+    }
+
+    // Begin Swiggy-style delivery partner discovery asynchronously
+    dispatchNextCandidate(order._id, req.io).catch((err) =>
+      console.warn("Delivery dispatch notice:", err.message)
+    );
+
+    return res.status(200).json({
+      message: "Order accepted by kitchen! Finding nearby delivery partner...",
+      order,
+    });
+  } catch (err) {
+    return res.status(500).json({ message: "Failed to accept order: " + err.message });
+  }
+});
+
+/**
+ * Restaurant Action 2: Reject Order
+ */
+restRoute.post("/order/:id/reject", authenticate, async (req, res) => {
+  const orderId = req.params.id;
+  const reason = req.body.reason || "Restaurant unable to fulfill order at this time";
+
+  try {
+    const order = await orderSchema.findById(orderId);
+    if (!order) return res.status(404).json({ message: "Order not found." });
+
+    if (["DELIVERED", "PICKED_UP", "CANCELLED"].includes(order.orderStatus)) {
+      return res.status(400).json({ message: `Cannot reject order in status: ${order.orderStatus}` });
+    }
+
+    const now = new Date();
+    order.orderStatus = "REJECTED";
+    order.status = "Rejected";
+    order.deliveryStatus = "CANCELLED";
+    order.rejectionReason = reason;
+
+    if (order.paymentmethod === "Online" && order.paymentStatus === "Paid") {
+      order.paymentStatus = "Refunded";
+    }
+
+    order.statusHistory.push({
+      status: "Rejected",
+      timestamp: now,
+      comment: `Order rejected by restaurant: ${reason}`,
+      updatedBy: "restaurant",
+    });
+
+    await order.save();
+
+    if (req.io) {
+      req.io.to(`order_${orderId}`).emit("order:rejected", { orderId, reason });
+      req.io.to(`user_${order.userid}`).emit("order:rejected", { orderId, reason });
+    }
+
+    return res.status(200).json({
+      message: "Order rejected and customer notified.",
+      order,
+    });
+  } catch (err) {
+    return res.status(500).json({ message: "Failed to reject order: " + err.message });
+  }
+});
+
+/**
+ * Restaurant Action 3: Mark Food Ready for Pickup
+ */
+restRoute.post("/order/:id/ready", authenticate, async (req, res) => {
+  const orderId = req.params.id;
+
+  try {
+    const order = await orderSchema.findById(orderId);
+    if (!order) return res.status(404).json({ message: "Order not found." });
+
+    if (["CANCELLED", "REJECTED", "DELIVERED", "PICKED_UP"].includes(order.orderStatus)) {
+      return res.status(400).json({ message: `Cannot mark food ready when status is: ${order.orderStatus}` });
+    }
+
+    const now = new Date();
+    order.orderStatus = "READY_FOR_PICKUP";
+    order.status = "Ready for Pickup";
+    order.statusHistory.push({
+      status: "Ready for Pickup",
+      timestamp: now,
+      comment: "Food is freshly cooked and packed for pickup.",
+      updatedBy: "restaurant",
+    });
+
+    await order.save();
+
+    if (req.io) {
+      req.io.to(`order_${orderId}`).emit("order:ready", { orderId, status: "Ready for Pickup" });
+      req.io.to(`user_${order.userid}`).emit("order:ready", { orderId, status: "Ready for Pickup" });
+      if (order.deliverypersonid) {
+        req.io.to(`delivery_${order.deliverypersonid}`).emit("order:ready", { orderId, message: "Order is packed and ready for pickup!" });
+      }
+    }
+
+    // If delivery is still searching, re-attempt candidate dispatch
+    if (order.deliveryStatus === "SEARCHING" || order.deliveryStatus === "NOT_REQUESTED") {
+      dispatchNextCandidate(order._id, req.io).catch(() => {});
+    }
+
+    return res.status(200).json({
+      message: "Food marked ready for pickup!",
+      order,
+    });
+  } catch (err) {
+    return res.status(500).json({ message: "Failed to update food status: " + err.message });
+  }
+});
+
+/**
+ * Restaurant Action: Retry Delivery Partner Dispatch
+ */
+restRoute.post("/order/:id/retry-dispatch", authenticate, async (req, res) => {
+  const orderId = req.params.id;
+  try {
+    const result = await dispatchNextCandidate(orderId, req.io);
+    return res.status(200).json(result);
+  } catch (err) {
+    return res.status(500).json({ message: "Failed to dispatch partner: " + err.message });
+  }
+});
+
+/**
+ * Legacy Status Change Endpoint with Strict Role Validation
+ * Prevents restaurants from hijacking delivery partner's status transitions!
  */
 restRoute.patch("/order/statuschange/:id", authenticate, async (req, res) => {
   const orderid = req.params.id;
   const newStatus = req.body.status;
 
+  // Strict Boundary Enforcement: Restaurants CANNOT set delivery transit states
+  if (["Out for Delivery", "Delivered", "Picked Up"].includes(newStatus)) {
+    return res.status(403).json({
+      message: "Forbidden: Kitchens cannot mark delivery transit or completion states. The delivery partner controls pickup and delivery.",
+    });
+  }
+
   try {
+    const order = await orderSchema.findById(orderid);
+    if (!order) return res.status(404).json({ message: "Order not found" });
+
+    const now = new Date();
+    if (newStatus === "Preparing" || newStatus === "Accepted") {
+      order.orderStatus = "PREPARING";
+      order.status = "Preparing";
+      dispatchNextCandidate(order._id, req.io).catch(() => {});
+    } else if (newStatus === "Ready for Pickup") {
+      order.orderStatus = "READY_FOR_PICKUP";
+      order.status = "Ready for Pickup";
+      if (order.deliverypersonid && req.io) {
+        req.io.to(`delivery_${order.deliverypersonid}`).emit("order:ready", { orderId: orderid });
+      }
+    } else if (newStatus === "Rejected" || newStatus === "Cancelled") {
+      order.orderStatus = "REJECTED";
+      order.status = "Rejected";
+      order.deliveryStatus = "CANCELLED";
+    }
+
+    order.statusHistory.push({
+      status: order.status,
+      timestamp: now,
+      comment: `Status updated to ${order.status} by restaurant.`,
+      updatedBy: "restaurant",
+    });
+
+    await order.save();
+
     const updatedOrder = await orderSchema
-      .findByIdAndUpdate(
-        orderid,
-        {
-          $set: { status: newStatus },
-          $push: {
-            statusHistory: {
-              status: newStatus,
-              timestamp: new Date(),
-              comment: `Status updated to ${newStatus} by restaurant.`,
-              updatedBy: "restaurant",
-            },
-          },
-        },
-        { new: true }
-      )
+      .findById(orderid)
       .populate("userid", "-password")
-      .populate("deliverypersonid")
+      .populate("deliverypersonid", "-password")
       .populate({ path: "menuid", populate: { path: "restaurantid" } });
 
-    if (!updatedOrder) {
-      return res.status(404).json({ message: "Order not found" });
-    }
-
-    // Scoped socket updates
     if (req.io) {
-      // Notify customer room
-      req.io.to(`user_${updatedOrder.userid._id}`).emit("orderStatusChanged", updatedOrder);
-      req.io.to(`order_${orderid}`).emit("status:update", { orderId: orderid, status: newStatus });
-
-      // Delivery room
-      if (updatedOrder.deliverypersonid) {
-        req.io.to(`delivery_${updatedOrder.deliverypersonid._id}`).emit("deliveryOrderUpdate", updatedOrder);
-      }
-
-      // Legacy user orders update event
-      const userOrders = await orderSchema
-        .find({ userid: updatedOrder.userid._id })
-        .populate("userid menuid deliverypersonid")
-        .sort({ createdAt: -1 });
-      req.io.emit("updatedOrder", userOrders);
+      req.io.to(`user_${updatedOrder.userid?._id || updatedOrder.userid}`).emit("orderStatusChanged", updatedOrder);
+      req.io.to(`order_${orderid}`).emit("status:update", { orderId: orderid, status: order.status });
     }
-
-    // Send transactional status update email
-    sendStatusUpdate(updatedOrder, updatedOrder.userid, newStatus);
 
     return res.status(200).json({ message: "Status Updated", order: updatedOrder });
   } catch (err) {

@@ -6,8 +6,13 @@ const AIChatWidget = () => {
   const [messages, setMessages] = useState([
     {
       sender: "bot",
-      text: "👋 Hi! I'm your **CraveCart Food Assistant**. Ask me about dishes, vegetarian options, active coupons, or your live order status!",
-      suggestions: ["Where is my order?", "Show active coupons", "Find biryani", "Which restaurants are open?"],
+      text: "Hello! I am your CraveCart AI Concierge. Ask me about menus, vegetarian picks, discounts, or your live order delivery status.",
+      suggestions: [
+        "Where is my order?",
+        "Show active coupons",
+        "Find spicy biryani",
+        "Top-rated restaurants",
+      ],
     },
   ]);
   const [inputMessage, setInputMessage] = useState("");
@@ -49,7 +54,7 @@ const AIChatWidget = () => {
         ...prev,
         {
           sender: "bot",
-          text: "I am having trouble reaching the kitchen right now. Please try again or check the menu directly.",
+          text: "I am having trouble connecting with our kitchen network. Please try again in a moment.",
         },
       ]);
     } finally {
@@ -59,10 +64,10 @@ const AIChatWidget = () => {
 
   return (
     <>
-      {/* Floating Toggle Button */}
+      {/* Floating Toggle Launcher */}
       <button
         type="button"
-        className="btn btn-primary-crave shadow-lg position-fixed d-flex align-items-center justify-content-center"
+        className="btn btn-crave-primary shadow-lg position-fixed d-flex align-items-center justify-content-center"
         style={{
           bottom: "24px",
           right: "24px",
@@ -70,76 +75,97 @@ const AIChatWidget = () => {
           height: "58px",
           borderRadius: "50%",
           zIndex: 1050,
-          border: "2px solid #ffffff",
+          border: "2px solid #FFFFFF",
+          boxShadow: "0 8px 24px rgba(255, 82, 0, 0.4)",
         }}
         onClick={() => setIsOpen(!isOpen)}
         aria-label="Toggle Food Assistant"
       >
         {isOpen ? (
-          <span style={{ fontSize: "22px", lineHeight: "1" }}>✕</span>
+          <i className="bi bi-x-lg fs-5"></i>
         ) : (
-          <span style={{ fontSize: "24px", lineHeight: "1" }}>💬</span>
+          <i className="bi bi-chat-dots-fill fs-5"></i>
         )}
       </button>
 
       {/* Chat Window Modal */}
       {isOpen && (
         <div
-          className="card shadow-xl border-0 position-fixed overflow-hidden d-flex flex-column"
+          className="glass-panel position-fixed overflow-hidden d-flex flex-column shadow-xl"
           style={{
             bottom: "94px",
             right: "24px",
-            width: "380px",
+            width: "390px",
             maxWidth: "calc(100vw - 32px)",
-            height: "520px",
+            height: "530px",
             maxHeight: "calc(100vh - 120px)",
-            borderRadius: "20px",
+            borderRadius: "24px",
             zIndex: 1050,
-            background: "#ffffff",
+            border: "1px solid rgba(255, 82, 0, 0.2)",
           }}
         >
           {/* Header */}
           <div
             className="p-3 text-white d-flex justify-content-between align-items-center"
-            style={{ background: "linear-gradient(135deg, #FF5200 0%, #FF7A00 100%)" }}
+            style={{ background: "linear-gradient(135deg, #0F172A 0%, #1E293B 100%)" }}
           >
             <div className="d-flex align-items-center gap-2">
               <div
-                className="bg-white rounded-circle d-flex align-items-center justify-content-center"
-                style={{ width: "32px", height: "32px", fontSize: "16px" }}
+                className="bg-primary bg-opacity-25 text-primary rounded-circle d-flex align-items-center justify-content-center border border-primary border-opacity-50"
+                style={{ width: "36px", height: "36px" }}
               >
-                🤖
+                <i className="bi bi-robot fs-5 text-white"></i>
               </div>
               <div>
-                <h6 className="mb-0 fw-bold">CraveCart Assistant</h6>
-                <small className="opacity-90" style={{ fontSize: "11px" }}>
-                  🟢 Live Data & Order Support
+                <h6 className="mb-0 fw-bold font-heading text-white">CraveCart AI Concierge</h6>
+                <small className="d-flex align-items-center gap-1 text-light opacity-75" style={{ fontSize: "11px" }}>
+                  <span
+                    className="d-inline-block rounded-circle bg-success"
+                    style={{ width: "6px", height: "6px" }}
+                  ></span>
+                  Live Orders & Menu Intelligence
                 </small>
               </div>
             </div>
             <button
-              className="btn btn-sm text-white p-0 border-0 fs-5"
+              className="btn btn-sm text-white-50 p-1 border-0 hover-lift"
               onClick={() => setIsOpen(false)}
+              aria-label="Close Assistant"
             >
-              ✕
+              <i className="bi bi-x-lg"></i>
             </button>
           </div>
 
           {/* Messages Scroll Area */}
-          <div className="flex-grow-1 p-3 overflow-y-auto bg-light" style={{ fontSize: "13.5px" }}>
+          <div
+            className="flex-grow-1 p-3 overflow-y-auto"
+            style={{ fontSize: "13.5px", backgroundColor: "#F8FAFC" }}
+          >
             {messages.map((msg, index) => (
               <div
                 key={index}
-                className={`d-flex mb-3 ${msg.sender === "user" ? "justify-content-end" : "justify-content-start"}`}
+                className={`d-flex mb-3 ${
+                  msg.sender === "user" ? "justify-content-end" : "justify-content-start"
+                }`}
               >
                 <div
-                  className={`p-3 rounded-4 ${
+                  className={`p-3 rounded-4 shadow-xs ${
                     msg.sender === "user"
                       ? "bg-primary text-white"
-                      : "bg-white text-dark shadow-sm border"
+                      : "bg-white text-dark border"
                   }`}
-                  style={{ maxWidth: "84%", whiteSpace: "pre-wrap", lineHeight: "1.45" }}
+                  style={{
+                    maxWidth: "86%",
+                    whiteSpace: "pre-wrap",
+                    lineHeight: "1.45",
+                    borderColor: "var(--border-subtle)",
+                  }}
                 >
+                  {msg.sender === "bot" && (
+                    <div className="d-flex align-items-center gap-1 text-primary fw-semibold small mb-1">
+                      <i className="bi bi-sparkles"></i> Crave Assistant
+                    </div>
+                  )}
                   {msg.text}
 
                   {/* Suggestion Chips */}
@@ -149,7 +175,7 @@ const AIChatWidget = () => {
                         <button
                           key={i}
                           type="button"
-                          className="btn btn-sm btn-outline-primary py-0 px-2 rounded-pill"
+                          className="btn btn-sm btn-crave-secondary py-1 px-2 rounded-pill font-heading"
                           style={{ fontSize: "11px" }}
                           onClick={() => handleSendMessage(sugg)}
                         >
@@ -164,9 +190,9 @@ const AIChatWidget = () => {
 
             {isTyping && (
               <div className="d-flex justify-content-start mb-2">
-                <div className="bg-white p-2 px-3 rounded-4 shadow-sm text-muted small">
-                  <span className="spinner-grow spinner-grow-sm text-primary me-1" />
-                  Checking menu & orders...
+                <div className="bg-white p-2 px-3 rounded-4 shadow-sm text-muted small border d-inline-flex align-items-center gap-2">
+                  <span className="spinner-grow spinner-grow-sm text-primary" />
+                  <span>Synthesizing kitchen knowledge...</span>
                 </div>
               </div>
             )}
@@ -180,10 +206,11 @@ const AIChatWidget = () => {
               handleSendMessage();
             }}
             className="p-2 bg-white border-top d-flex gap-2 align-items-center"
+            style={{ borderColor: "var(--border-subtle)" }}
           >
             <input
               type="text"
-              className="form-control rounded-pill border-0 bg-light px-3"
+              className="form-control rounded-pill border-0 bg-light px-3 py-2"
               placeholder="Ask about foods, offers, status..."
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
@@ -191,11 +218,12 @@ const AIChatWidget = () => {
             />
             <button
               type="submit"
-              className="btn btn-primary rounded-circle d-flex align-items-center justify-content-center p-0"
-              style={{ width: "36px", height: "36px", flexShrink: 0 }}
+              className="btn btn-crave-primary rounded-circle d-flex align-items-center justify-content-center p-0"
+              style={{ width: "38px", height: "38px", flexShrink: 0 }}
               disabled={!inputMessage.trim()}
+              aria-label="Send message"
             >
-              ➤
+              <i className="bi bi-send-fill fs-6"></i>
             </button>
           </form>
         </div>

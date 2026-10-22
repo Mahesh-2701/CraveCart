@@ -21,7 +21,7 @@ export default function Card(props) {
   const addtocart = () => {
     const userId = localStorage.getItem("id");
     if (!userId) {
-      toast.error("Please login to your CraveCart account to add items.");
+      toast.error("Please log in to your CraveCart account to add items.");
       return;
     }
 
@@ -42,25 +42,25 @@ export default function Card(props) {
   };
 
   return (
-    <div className="card food-card-v2 h-100 position-relative shadow-sm">
+    <div className="card crave-card h-100 position-relative shadow-xs border-0">
       {/* Image Container with Badges */}
-      <div className="position-relative" style={{ height: "180px", overflow: "hidden" }}>
+      <div className="position-relative" style={{ height: "190px", overflow: "hidden" }}>
         <img
           src={getImageUrl(image)}
           className="w-100 h-100 object-fit-cover"
           alt={name}
-          style={{ objectFit: "cover" }}
+          style={{ transition: "transform 0.4s ease" }}
           loading="lazy"
         />
 
         {/* Dietary Badge */}
         <div className="position-absolute top-0 start-0 m-2">
           {isVeg ? (
-            <span className="veg-badge bg-white shadow-sm" title="Pure Vegetarian">
+            <span className="badge-veg bg-white shadow-sm" title="Pure Vegetarian">
               <span className="veg-dot" />
             </span>
           ) : (
-            <span className="non-veg-badge bg-white shadow-sm" title="Non-Vegetarian">
+            <span className="badge-nonveg bg-white shadow-sm" title="Non-Vegetarian">
               <span className="non-veg-dot" />
             </span>
           )}
@@ -69,7 +69,8 @@ export default function Card(props) {
         {/* Rating Pill */}
         <div className="position-absolute bottom-0 end-0 m-2">
           <span className="rating-pill shadow-sm">
-            ★ {rating.toFixed(1)}
+            <i className="bi bi-star-fill" style={{ fontSize: "10px" }}></i>
+            {rating ? rating.toFixed(1) : "4.2"}
           </span>
         </div>
 
@@ -78,13 +79,13 @@ export default function Card(props) {
           <div
             className="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center text-white px-2 text-center"
             style={{
-              backgroundColor: "rgba(15, 23, 42, 0.72)",
+              backgroundColor: "rgba(15, 23, 42, 0.75)",
               backdropFilter: "blur(2px)",
               fontWeight: 600,
-              fontSize: "0.9rem",
+              fontSize: "0.85rem",
             }}
           >
-            Restaurant currently closed
+            <i className="bi bi-moon-stars me-1"></i> Kitchen Currently Offline
           </div>
         )}
       </div>
@@ -92,32 +93,33 @@ export default function Card(props) {
       {/* Body */}
       <div className="card-body p-3 d-flex flex-column justify-content-between">
         <div>
-          <h6 className="fw-bold mb-1 text-truncate" title={name}>
+          <h6 className="fw-bold font-heading mb-1 text-truncate text-dark" title={name}>
             {name}
           </h6>
           {restaurantname && (
-            <p className="text-muted small mb-1 text-truncate">
-              {restaurantname}
+            <p className="text-muted small mb-1 text-truncate d-flex align-items-center gap-1">
+              <i className="bi bi-shop text-primary" style={{ fontSize: "11px" }}></i>
+              <span>{restaurantname}</span>
             </p>
           )}
           {description && (
-            <p className="text-muted small mb-2 text-truncate" style={{ fontSize: "0.8rem" }}>
+            <p className="text-muted small mb-2 text-truncate" style={{ fontSize: "0.82rem" }}>
               {description}
             </p>
           )}
         </div>
 
         <div className="d-flex justify-content-between align-items-center pt-2 mt-2 border-top">
-          <span className="fw-bold fs-5 text-dark">₹{price}</span>
+          <span className="fw-bold fs-5 text-dark font-heading">₹{price}</span>
           {isAvailable ? (
             <button
-              className="btn btn-sm btn-outline-success fw-bold px-3 py-1 rounded-pill"
+              className="btn btn-sm btn-crave-secondary fw-bold px-3 py-1 rounded-pill d-inline-flex align-items-center gap-1 text-primary border-primary"
               onClick={addtocart}
             >
-              ADD +
+              <i className="bi bi-plus-lg"></i> ADD
             </button>
           ) : (
-            <span className="badge bg-secondary">Unavailable</span>
+            <span className="badge bg-light text-muted border">Unavailable</span>
           )}
         </div>
       </div>

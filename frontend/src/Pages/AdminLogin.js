@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import api from "../config/api";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
+import CraveCartLogo from "../components/CraveCartLogo";
 
 export default function AdminLogin() {
   const navigate = useNavigate();
@@ -10,6 +11,7 @@ export default function AdminLogin() {
     email: "",
     password: "",
   });
+  const [loading, setLoading] = useState(false);
 
   const update = (event) => {
     setLogin({ ...login, [event.target.name]: event.target.value });
@@ -17,6 +19,7 @@ export default function AdminLogin() {
 
   const send = (event) => {
     event.preventDefault();
+    setLoading(true);
 
     api
       .post("/admin/login", login)
@@ -28,56 +31,96 @@ export default function AdminLogin() {
         setTimeout(() => navigate("/admin/dashboard"), 1000);
       })
       .catch((err) => {
+        setLoading(false);
         toast.error(err.response?.data?.message || "Invalid administrative credentials");
       });
   };
 
   return (
     <div
-      className="d-flex align-items-center justify-content-center min-vh-100"
+      className="d-flex align-items-center justify-content-center min-vh-100 p-3"
       style={{
-        background: "linear-gradient(135deg, #0F172A 0%, #1E293B 100%)",
+        background: "linear-gradient(135deg, #0B1120 0%, #1E293B 100%)",
       }}
     >
-      <div className="container p-3 d-flex justify-content-center">
+      <div className="w-100" style={{ maxWidth: "440px" }}>
+        <div className="text-center mb-4">
+          <CraveCartLogo variant="white" size="lg" clickable={false} />
+        </div>
+
         <form
           onSubmit={send}
-          className="w-100 p-4 border-0 shadow-2xl rounded-4 text-white"
-          style={{ maxWidth: "440px", background: "rgba(30, 41, 59, 0.85)", backdropFilter: "blur(12px)" }}
+          className="glass-panel-dark p-4 p-md-5 border-0 shadow-2xl rounded-4"
         >
           <div className="text-center mb-4">
-            <span className="badge bg-danger rounded-circle p-3 fs-5 mb-2">🛡️</span>
-            <h3 className="fw-bold mb-1">CraveCart Administration</h3>
-            <p className="text-muted small">Enter your administrative credentials to continue</p>
+            <div
+              className="rounded-circle mx-auto mb-2 d-flex align-items-center justify-content-center"
+              style={{
+                width: "48px",
+                height: "48px",
+                backgroundColor: "rgba(239, 68, 68, 0.15)",
+                color: "#EF4444",
+                border: "1px solid rgba(239, 68, 68, 0.3)",
+              }}
+            >
+              <i className="bi bi-shield-lock-fill fs-4"></i>
+            </div>
+            <h3 className="fw-bold font-heading text-white mb-1">Platform Admin</h3>
+            <p className="text-light opacity-75 small">Secure operations & dispatch management</p>
           </div>
 
           <div className="mb-3">
-            <label className="form-label small text-light fw-semibold">Admin Email</label>
-            <input
-              type="email"
-              className="form-control rounded-3 bg-dark text-white border-secondary"
-              placeholder="admin@cravecart.com"
-              onChange={update}
-              name="email"
-              required
-            />
+            <label className="crave-label text-light opacity-75">Admin Email</label>
+            <div className="crave-search-bar">
+              <i className="bi bi-person-fill-lock text-light opacity-50"></i>
+              <input
+                type="email"
+                className="crave-input bg-dark text-white border-secondary"
+                placeholder="admin@cravecart.com"
+                onChange={update}
+                name="email"
+                value={login.email}
+                required
+              />
+            </div>
           </div>
 
           <div className="mb-4">
-            <label className="form-label small text-light fw-semibold">Admin Password</label>
-            <input
-              type="password"
-              className="form-control rounded-3 bg-dark text-white border-secondary"
-              placeholder="••••••••"
-              onChange={update}
-              name="password"
-              required
-            />
+            <label className="crave-label text-light opacity-75">Access Key / Password</label>
+            <div className="crave-search-bar">
+              <i className="bi bi-key-fill text-light opacity-50"></i>
+              <input
+                type="password"
+                className="crave-input bg-dark text-white border-secondary"
+                placeholder="••••••••"
+                onChange={update}
+                name="password"
+                value={login.password}
+                required
+              />
+            </div>
           </div>
 
-          <button type="submit" className="btn btn-warning w-100 py-2 fs-6 fw-bold">
-            Sign In to Command Center
+          <button
+            type="submit"
+            className="btn btn-warning text-dark w-100 py-3 font-heading fw-bold shadow-md"
+            disabled={loading}
+          >
+            {loading ? (
+              <span>
+                <span className="spinner-border spinner-border-sm me-2" />
+                Verifying Credentials...
+              </span>
+            ) : (
+              "Sign In to Operations Console"
+            )}
           </button>
+
+          <div className="text-center mt-4">
+            <Link to="/" className="text-light opacity-75 small text-decoration-none">
+              <i className="bi bi-arrow-left me-1"></i> Return to Public Site
+            </Link>
+          </div>
         </form>
 
         <ToastContainer position="top-right" autoClose={3000} />

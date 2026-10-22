@@ -1,197 +1,297 @@
-import React from "react";
+import React, { useState } from "react";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import AIChatWidget from "./components/AIChatWidget";
 
 export default function App() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const navigate = useNavigate();
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/foods?search=${encodeURIComponent(searchQuery.trim())}`);
+    } else {
+      navigate("/foods");
+    }
+  };
+
+  const categories = [
+    {
+      name: "Biryani & Bowls",
+      image: "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500&auto=format&fit=crop&q=60",
+      query: "biryani",
+    },
+    {
+      name: "Artisan Pizza",
+      image: "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=500&auto=format&fit=crop&q=60",
+      query: "pizza",
+    },
+    {
+      name: "Craft Burgers",
+      image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&auto=format&fit=crop&q=60",
+      query: "burger",
+    },
+    {
+      name: "South Indian",
+      image: "https://images.unsplash.com/photo-1610192244261-3f33de3f55e4?w=500&auto=format&fit=crop&q=60",
+      query: "dosa",
+    },
+    {
+      name: "Desserts & Bakes",
+      image: "https://images.unsplash.com/photo-1587314168485-3236d6710814?w=500&auto=format&fit=crop&q=60",
+      query: "cake",
+    },
+    {
+      name: "Fresh Beverages",
+      image: "https://images.unsplash.com/photo-1551024709-8f23befc6f87?w=500&auto=format&fit=crop&q=60",
+      query: "juice",
+    },
+  ];
+
   return (
-    <div>
+    <div className="min-vh-100 d-flex flex-column bg-light">
       <Navbar />
 
-      <section
-        className="d-flex container rounded-5 align-items-center justify-content-center text-center text-white mt-3"
-        style={{
-          backgroundImage:
-            "url(https://images.unsplash.com/photo-1539136788836-5699e78bfc75?fm=jpg&q=60&w=3000&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8Zm9vZCUyMHBsYXRlfGVufDB8fDB8fHww)",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          height: "70vh",
-          position: "relative",
-        }}
-      >
-        {/* Overlay (optional dark tint for better readability) */}
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            backgroundColor: "rgba(0, 0, 0, 0.37)",
-            borderRadius: "30px",
-            zIndex: 1,
-          }}
-        ></div>
+      {/* Hero Section */}
+      <section className="position-relative overflow-hidden py-5 px-3" style={{ background: "linear-gradient(180deg, #FFF6F2 0%, #FFFFFF 100%)" }}>
+        <div className="container py-lg-4">
+          <div className="row align-items-center g-5">
+            {/* Left Hero Content */}
+            <div className="col-12 col-lg-7">
+              <div className="d-inline-flex align-items-center gap-2 bg-white px-3 py-1 rounded-pill border shadow-xs mb-3">
+                <span className="badge rounded-pill bg-primary px-2 py-1">FAST & FRESH</span>
+                <span className="small text-muted fw-semibold">
+                  Live Real-Time Order Tracking & Express Delivery
+                </span>
+              </div>
+              <h1 className="display-4 fw-extrabold font-heading text-dark mb-3" style={{ lineHeight: 1.15 }}>
+                Savor the Best Dishes <br />
+                <span style={{ color: "var(--primary)" }}>Delivered in Minutes.</span>
+              </h1>
+              <p className="lead text-muted mb-4" style={{ maxWidth: "560px" }}>
+                Explore thousands of chef-curated dishes and premium local restaurants.
+                Fast delivery, live GPS tracking, and seamless checkout.
+              </p>
 
-        {/* Content */}
-        <div style={{ zIndex: 2, maxWidth: "700px", padding: "20px" }}>
-          <h1 className="fw-bold display-4">
-            Order your <br /> favourite food here
-          </h1>
-          <p className="lead mt-3">
-            Choose from a diverse menu crafted with the finest ingredients and
-            culinary expertise. Delivered fast, hot, and fresh at your doorstep.
-          </p>
-           <Link
-                type="button"
-                className="btn btn-warning btn px-4 py-2 rounded-pill" to="/foods"
-              >
-               View Menu
-              </Link>
+              {/* Instant Search Bar */}
+              <form onSubmit={handleSearchSubmit} className="d-flex align-items-center bg-white p-2 rounded-pill shadow-md border mb-4" style={{ maxWidth: "540px" }}>
+                <i className="bi bi-search text-muted fs-5 ms-3 me-2"></i>
+                <input
+                  type="text"
+                  className="form-control border-0 shadow-none px-2 py-2"
+                  placeholder="Search for biryani, burgers, pizza or cuisine..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  style={{ fontSize: "0.95rem" }}
+                />
+                <button type="submit" className="btn btn-crave-primary rounded-pill px-4 py-2 ms-2">
+                  Search
+                </button>
+              </form>
+
+              {/* Quick Tags */}
+              <div className="d-flex flex-wrap align-items-center gap-2 text-muted small">
+                <span className="fw-semibold">Popular Now:</span>
+                <button type="button" onClick={() => navigate("/foods?category=Biryani")} className="btn btn-sm btn-light border rounded-pill px-3 py-1 text-secondary">
+                  Biryani
+                </button>
+                <button type="button" onClick={() => navigate("/foods?category=Pizza")} className="btn btn-sm btn-light border rounded-pill px-3 py-1 text-secondary">
+                  Pizza
+                </button>
+                <button type="button" onClick={() => navigate("/foods?category=Burger")} className="btn btn-sm btn-light border rounded-pill px-3 py-1 text-secondary">
+                  Burgers
+                </button>
+                <button type="button" onClick={() => navigate("/restaurants")} className="btn btn-sm btn-light border rounded-pill px-3 py-1 text-primary fw-semibold">
+                  Top Restaurants →
+                </button>
+              </div>
+            </div>
+
+            {/* Right Hero Visual Cards */}
+            <div className="col-12 col-lg-5 position-relative text-center">
+              <div className="position-relative mx-auto" style={{ maxWidth: "420px" }}>
+                {/* Main Hero Platter Image */}
+                <img
+                  src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&auto=format&fit=crop&q=80"
+                  alt="Delicious Bowl"
+                  className="img-fluid rounded-5 shadow-xl animate-float"
+                  style={{ width: "100%", height: "380px", objectFit: "cover" }}
+                />
+
+                {/* Floating Micro Badge: Fast Delivery */}
+                <div
+                  className="glass-panel position-absolute p-3 rounded-4 shadow-lg d-flex align-items-center gap-3"
+                  style={{ bottom: "-15px", left: "-15px", border: "1px solid rgba(255,255,255,0.8)" }}
+                >
+                  <div className="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style={{ width: "42px", height: "42px" }}>
+                    <i className="bi bi-stopwatch-fill fs-5"></i>
+                  </div>
+                  <div className="text-start">
+                    <div className="fw-bold font-heading text-dark">30 Mins</div>
+                    <small className="text-muted">Average Delivery</small>
+                  </div>
+                </div>
+
+                {/* Floating Micro Badge: 4.8 Rating */}
+                <div
+                  className="glass-panel position-absolute p-2 px-3 rounded-pill shadow-lg d-flex align-items-center gap-2"
+                  style={{ top: "20px", right: "-15px" }}
+                >
+                  <i className="bi bi-star-fill text-warning"></i>
+                  <span className="fw-bold text-dark font-heading">4.9 / 5.0</span>
+                  <small className="text-muted">(10k+ reviews)</small>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
-      <section >
-        <div
-          className="position-relative container-fluid my-5 vh-100 d-flex flex-column justify-content-center overflow-hidden text-white"
-          style={{
-            minHeight: "450px",
-            backgroundImage:
-              "url(https://images.pexels.com/photos/2977515/pexels-photo-2977515.jpeg)",
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-          }}
-        >
-          {/* Dark Overlay */}
-          <div
-            className="position-absolute top-0 start-0 w-100 h-100"
-            style={{ background: "rgba(0, 0, 0, 0.55)" }}
-          ></div>
+      {/* Category Discovery Carousel / Grid */}
+      <section className="container py-5">
+        <div className="d-flex justify-content-between align-items-end mb-4">
+          <div>
+            <span className="text-primary fw-bold text-uppercase small" style={{ letterSpacing: "1px" }}>
+              Inspiration For Your First Order
+            </span>
+            <h2 className="fw-bold font-heading text-dark mt-1 mb-0">What's on your mind?</h2>
+          </div>
+          <Link to="/foods" className="btn btn-sm btn-crave-secondary rounded-pill px-3 d-none d-sm-inline-flex">
+            Explore All Dishes <i className="bi bi-arrow-right ms-1"></i>
+          </Link>
+        </div>
 
-          {/* Content */}
-          <div className="position-relative text-center p-5">
-            {/* Heading */}
-            <h1 className="display-4 fw-bold mb-4">Partner with Us</h1>
-
-            {/* Subtext */}
-            <p className="h3 mb-2 col-lg-8 mx-auto text-outline-secondary"><b>Are you a restaurant owner? </b></p>
-            <p className="lead mb-5 col-lg-8 mx-auto">
-              Join us and grow your business by
-              reaching thousands of food lovers daily.<br></br> Enjoy 0% commission for
-              the first month and become part of our premium partner network!
-            </p>
-
-            {/* CTA Buttons */}
-            <div className="d-grid gap-3 d-sm-flex justify-content-sm-center">
+        <div className="row g-3 row-cols-2 row-cols-md-3 row-cols-lg-6">
+          {categories.map((cat, idx) => (
+            <div key={idx} className="col">
               <Link
-                type="button"
-                className="btn btn-danger btn-lg px-5 py-3 rounded-pill" to="/restaurant/admin"
+                to={`/foods?search=${encodeURIComponent(cat.query)}`}
+                className="card h-100 border-0 bg-white shadow-xs rounded-4 text-center p-3 text-decoration-none crave-card-hover"
+                style={{ transition: "all 0.25s ease" }}
               >
-                Partner With Us
+                <div className="rounded-circle overflow-hidden mx-auto mb-2 shadow-sm" style={{ width: "90px", height: "90px" }}>
+                  <img
+                    src={cat.image}
+                    alt={cat.name}
+                    className="w-100 h-100 object-fit-cover"
+                    loading="lazy"
+                  />
+                </div>
+                <h6 className="fw-semibold text-dark mb-0 font-heading" style={{ fontSize: "0.9rem" }}>
+                  {cat.name}
+                </h6>
               </Link>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Features & Trust Bar */}
+      <section className="bg-white py-5 border-top border-bottom">
+        <div className="container">
+          <div className="row g-4 text-center text-md-start">
+            <div className="col-12 col-md-4 d-flex flex-column flex-md-row align-items-center gap-3">
+              <div className="metric-icon-box bg-primary bg-opacity-10 text-primary flex-shrink-0">
+                <i className="bi bi-geo-alt-fill"></i>
+              </div>
+              <div>
+                <h5 className="fw-bold font-heading mb-1">Live Map Telemetry</h5>
+                <p className="text-muted small mb-0">
+                  Track your food order from kitchen preparation to driver pickup with high precision.
+                </p>
+              </div>
+            </div>
+            <div className="col-12 col-md-4 d-flex flex-column flex-md-row align-items-center gap-3">
+              <div className="metric-icon-box bg-success bg-opacity-10 text-success flex-shrink-0">
+                <i className="bi bi-shield-check"></i>
+              </div>
+              <div>
+                <h5 className="fw-bold font-heading mb-1">Verified Kitchens</h5>
+                <p className="text-muted small mb-0">
+                  Every restaurant complies with strict food hygiene standards and temperature checks.
+                </p>
+              </div>
+            </div>
+            <div className="col-12 col-md-4 d-flex flex-column flex-md-row align-items-center gap-3">
+              <div className="metric-icon-box bg-info bg-opacity-10 text-info flex-shrink-0">
+                <i className="bi bi-wallet2"></i>
+              </div>
+              <div>
+                <h5 className="fw-bold font-heading mb-1">Razorpay & UPI Instant</h5>
+                <p className="text-muted small mb-0">
+                  Seamless payment flow with instant webhook order confirmations and COD options.
+                </p>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-    <section className="container rounded-3  bg-white py-5 position-relative overflow-hidden">
-      <div className="text-center">
-        {/* Heading */}
-        <h2 className="fw-bold text-danger mb-3 display-5">
-          Better food for <br /> more people
-        </h2>
-
-        {/* Subheading */}
-        <p className="text-muted mx-auto mb-5 fs-5" style={{ maxWidth: "600px" }}>
-          For over a decade, we’ve enabled our customers to discover new tastes,
-          delivered right to their doorstep
-        </p>
-      </div>
-
-      {/* Floating Images */}
-      <div className="position-absolute top-0 start-0 translate-middle">
-        <img
-          src="https://pngimg.com/uploads/burger_sandwich/burger_sandwich_PNG4135.png"
-          alt="Burger"
-          className="img-fluid"
-          style={{ maxWidth: "180px" }}
-        />
-      </div>
-
-      <div className="position-absolute top-0 end-0 translate-middle">
-        <img
-          src="https://pngimg.com/uploads/pizza/pizza_PNG43991.png"
-          alt="Pizza"
-          className="img-fluid"
-          style={{ maxWidth: "180px" }}
-        />
-      </div>
-
-      {/* Stats Section */}
-      <div className="container mt-5 ">
-        <div className="row justify-content-center g-4 bg-white shadow rounded-4 py-4 px-2">
-          <div className="col-12 col-md-4 text-center">
-            <h3 className="fw-bold">3000+</h3>
-            <p className="text-muted mb-0">Restaurants</p>
+      {/* Partner Banners (Dual Grid) */}
+      <section className="container py-5 my-2">
+        <div className="row g-4">
+          {/* Restaurant Partner */}
+          <div className="col-12 col-lg-6">
+            <div
+              className="p-4 p-md-5 rounded-4 text-white position-relative overflow-hidden h-100 d-flex flex-column justify-content-between shadow-md"
+              style={{
+                background: "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)",
+                minHeight: "280px",
+              }}
+            >
+              <div>
+                <span className="badge rounded-pill bg-warning text-dark px-3 py-1 fw-bold mb-3">
+                  <i className="bi bi-shop me-1"></i> FOR RESTAURANTS
+                </span>
+                <h3 className="fw-bold font-heading text-white mb-2">Partner with CraveCart</h3>
+                <p className="text-light opacity-75 mb-4" style={{ maxWidth: "420px" }}>
+                  Supercharge your sales with our Kitchen Display System (KDS), menu manager,
+                  and instant rider dispatch.
+                </p>
+              </div>
+              <div>
+                <Link to="/restaurant/view" className="btn btn-crave-primary rounded-pill px-4">
+                  Merchant Portal <i className="bi bi-arrow-right ms-1"></i>
+                </Link>
+              </div>
+            </div>
           </div>
-          <div className="col-12 col-md-4 text-center">
-            <h3 className="fw-bold">100+</h3>
-            <p className="text-muted mb-0">Cities</p>
-          </div>
-          <div className="col-12 col-md-4 text-center">
-            <h3 className="fw-bold">1 Million+</h3>
-            <p className="text-muted mb-0">Orders delivered</p>
-          </div>
-        </div>
-      </div>
-    </section>
 
-      <section >
-        <div
-          className="position-relative container-fluid my-5 d-flex flex-column justify-content-center vh-100 overflow-hidden text-white"
-          style={{
-            minHeight: "450px",
-            backgroundImage:
-              "url(https://media.gettyimages.com/id/2183497842/photo/a-swiggy-ltd-delivery-worker-in-traffic-in-mumbai-india-on-thursday-oct-24-2024-swiggys-1-3.jpg?s=612x612&w=0&k=20&c=nXjMjwyGKxSthkV92V9TeOUX5oklh7QrkfsC00aBYKg=)",
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-          }}
-        >
-          {/* Dark Overlay */}
-          <div
-            className="position-absolute top-0 start-0 w-100 h-100"
-            style={{ background: "rgba(0, 0, 0, 0.55)" }}
-          ></div>
-
-          {/* Content */}
-          <div className="position-relative text-center p-5">
-            {/* Heading */}
-            <h1 className="display-4 fw-bold mb-4">Work with Us</h1>
-
-            {/* Subtext */}
-            <p className="h3 mb-2 col-lg-8 mx-auto text-outline-secondary"><b>Join us and grow your Income!</b></p>
-            <p className="lead mb-5 col-lg-8 mx-auto">
-              
-             
-              Get your uniform and bag delivered at your home Deliver orders and Earn big with Us<br></br> 
-              You can become a part-time or a full-time delivery partner based on your preference.
-            </p>
-
-            {/* CTA Buttons */}
-            <div className="d-grid gap-3 d-sm-flex justify-content-sm-center">
-             <Link
-                type="button"
-                className="btn btn-danger btn-lg px-5 py-3 rounded-pill" to="/delivery/order"
-              >
-                Ride With Us
-              </Link>
+          {/* Delivery Partner */}
+          <div className="col-12 col-lg-6">
+            <div
+              className="p-4 p-md-5 rounded-4 text-white position-relative overflow-hidden h-100 d-flex flex-column justify-content-between shadow-md"
+              style={{
+                background: "linear-gradient(135deg, #FF5200 0%, #FF7A00 100%)",
+                minHeight: "280px",
+              }}
+            >
+              <div>
+                <span className="badge rounded-pill bg-white text-primary px-3 py-1 fw-bold mb-3">
+                  <i className="bi bi-bicycle me-1"></i> FOR RIDERS
+                </span>
+                <h3 className="fw-bold font-heading text-white mb-2">Ride & Earn with CraveCart</h3>
+                <p className="text-white opacity-90 mb-4" style={{ maxWidth: "420px" }}>
+                  Enjoy flexible delivery shifts, fair per-trip earnings, direct OTP handover,
+                  and live GPS route assistance.
+                </p>
+              </div>
+              <div>
+                <Link to="/delivery" className="btn btn-crave-dark rounded-pill px-4">
+                  Join Driver Fleet <i className="bi bi-arrow-right ms-1"></i>
+                </Link>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
+      {/* Floating AI Concierge */}
       <AIChatWidget />
+
+      {/* Footer */}
       <Footer />
     </div>
   );

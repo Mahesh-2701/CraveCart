@@ -32,8 +32,8 @@ export default function RestaurantOrder() {
     if (restaurantId) {
       socket.emit("join", `restaurant_${restaurantId}`);
 
-      socket.on("updatingRestOrder", (newOrders) => {
-        toast.info("🔔 New order received!");
+      socket.on("updatingRestOrder", () => {
+        toast.info("New kitchen order received!");
         loadRestaurantOrders();
       });
     }
@@ -50,12 +50,15 @@ export default function RestaurantOrder() {
     <div className="bg-light min-vh-100 d-flex flex-column">
       <RestaurantNavbar />
       <div className="container py-4 flex-grow-1">
-        <div className="d-flex justify-content-between align-items-center mb-4">
+        <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
           <div>
-            <h3 className="fw-bold mb-0">Incoming Orders Dashboard</h3>
+            <span className="badge rounded-pill bg-warning bg-opacity-10 text-dark border border-warning border-opacity-25 px-3 py-1 font-heading small mb-1">
+              KITCHEN DISPLAY SYSTEM (KDS)
+            </span>
+            <h3 className="fw-bold font-heading text-dark mb-0">Incoming Orders Dashboard</h3>
             <p className="text-muted small mb-0">Manage kitchen preparation and dispatch status in real-time</p>
           </div>
-          <span className="badge bg-primary px-3 py-2 rounded-pill">
+          <span className="badge bg-primary px-3 py-2 rounded-pill font-heading">
             Active Orders: {orders.length}
           </span>
         </div>
@@ -63,35 +66,44 @@ export default function RestaurantOrder() {
         {loading ? (
           <div className="text-center py-5">
             <div className="spinner-border text-primary" role="status" />
-            <p className="mt-2 text-muted">Retrieving incoming orders...</p>
+            <p className="mt-2 text-muted font-heading">Retrieving incoming kitchen orders...</p>
           </div>
         ) : orders.length === 0 ? (
-          <div className="card shadow-sm border-0 rounded-4 text-center py-5 p-4 bg-white">
-            <span style={{ fontSize: "52px" }}>👨‍🍳</span>
-            <h4 className="mt-3 fw-bold">No orders right now</h4>
-            <p className="text-muted">New customer orders will ring here automatically via live WebSocket updates.</p>
+          <div className="card shadow-xs border-0 rounded-4 text-center py-5 p-4 bg-white my-4">
+            <div className="mx-auto text-muted mb-3 p-3 bg-light rounded-circle" style={{ width: "80px", height: "80px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <i className="bi bi-cup-hot fs-1 text-warning"></i>
+            </div>
+            <h4 className="mt-2 fw-bold font-heading text-dark">No active orders right now</h4>
+            <p className="text-muted small mx-auto" style={{ maxWidth: "400px" }}>
+              New customer orders will ring here automatically via live WebSocket updates as soon as foodies checkout.
+            </p>
           </div>
         ) : (
-          <div className="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
-            <div className="table-responsive">
-              <table className="table table-hover align-middle mb-0">
-                <thead className="table-light">
+          <div className="card border-0 shadow-xs rounded-4 overflow-hidden bg-white">
+            <div className="crave-table-container">
+              <table className="crave-table">
+                <thead>
                   <tr>
-                    <th className="py-3 ps-3">#</th>
-                    <th className="py-3">Food Item</th>
-                    <th className="py-3">Customer</th>
-                    <th className="py-3">Qty</th>
-                    <th className="py-3">Total</th>
-                    <th className="py-3">Update Status</th>
-                    <th className="py-3">Payment</th>
-                    <th className="py-3">Delivery Partner</th>
-                    <th className="py-3">Date</th>
-                    <th className="py-3 pe-3">Live Map</th>
+                    <th>#</th>
+                    <th>Food Item</th>
+                    <th>Customer</th>
+                    <th>Qty</th>
+                    <th>Total</th>
+                    <th>Kitchen Action</th>
+                    <th>Payment</th>
+                    <th>Delivery Partner</th>
+                    <th>Time</th>
+                    <th className="text-end">Map</th>
                   </tr>
                 </thead>
                 <tbody>
                   {orders.map((order, index) => (
-                    <RestaurantOrderCard order={order} key={order._id} index={index} />
+                    <RestaurantOrderCard
+                      order={order}
+                      key={order._id}
+                      index={index}
+                      onRefresh={loadRestaurantOrders}
+                    />
                   ))}
                 </tbody>
               </table>

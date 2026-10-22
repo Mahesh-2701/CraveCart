@@ -48,18 +48,81 @@ const orderSchema = new mongoose.Schema(
     // Enhanced multi-item order support
     items: [orderItemSchema],
 
-    // Order status state machine
+    // 1. Order & Kitchen Lifecycle State Machine
+    orderStatus: {
+      type: String,
+      enum: ["PLACED", "ACCEPTED", "PREPARING", "READY_FOR_PICKUP", "PICKED_UP", "DELIVERED", "CANCELLED", "REJECTED"],
+      default: "PLACED",
+    },
+    // Backward-compatible synced status string
     status: {
       type: String,
-      enum: ["Pending", "Preparing", "Ready for Pickup", "Out for Delivery", "Delivered", "Cancelled"],
-      default: "Preparing",
+      enum: ["Pending", "Placed", "Accepted", "Preparing", "Ready for Pickup", "Picked Up", "Out for Delivery", "Delivered", "Cancelled", "Rejected"],
+      default: "Placed",
     },
     statusHistory: [statusHistorySchema],
+    rejectionReason: { type: String, default: "" },
+
+    // 2. Delivery Orchestration Lifecycle State Machine
+    deliveryStatus: {
+      type: String,
+      enum: [
+        "NOT_REQUESTED",
+        "SEARCHING",
+        "OFFERED",
+        "ASSIGNED",
+        "ARRIVED_AT_RESTAURANT",
+        "PICKED_UP",
+        "OUT_FOR_DELIVERY",
+        "ARRIVED_AT_CUSTOMER",
+        "DELIVERED",
+        "CANCELLED",
+        "FAILED",
+      ],
+      default: "NOT_REQUESTED",
+    },
+    deliveryTimeline: [statusHistorySchema],
+
+    // Active delivery offer tracking
+    deliveryOffer: {
+      deliveryPartnerId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "deliveryperson",
+        default: null,
+      },
+      offerCreatedAt: { type: Date, default: null },
+      offerExpiresAt: { type: Date, default: null },
+      offerState: {
+        type: String,
+        enum: ["NONE", "PENDING", "ACCEPTED", "DECLINED", "EXPIRED"],
+        default: "NONE",
+      },
+      attemptCount: { type: Number, default: 0 },
+    },
+
+    // Candidates who declined or timed out for this order
+    declinedPartners: [
+      {
+        partnerId: { type: mongoose.Schema.Types.ObjectId, ref: "deliveryperson" },
+        declinedAt: { type: Date, default: Date.now },
+        reason: { type: String, default: "" },
+      },
+    ],
+
+    // Customer delivery confirmation OTP
+    deliveryOtp: { type: String, default: null },
+
+    // Restaurant Association
+    restaurantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "restaurant",
+      default: null,
+    },
 
     // Payment details
     paymentmethod: {
       type: String,
-      enum: ["COD", "Online"],
+      enum: ["COD", "Online", "Cash on Delivery"],
       default: "COD",
     },
     paymentStatus: {
@@ -119,19 +182,54 @@ const orderSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Auto-populate helper and total calculation
+// Auto-populate helper, OTP generation, and total calculation
 orderSchema.pre("save", function (next) {
   if (!this.totalAmount || this.totalAmount === 0) {
     this.totalAmount = (this.price * (this.quantity || 1)) + (this.deliveryFee || 0) - (this.discountAmount || 0);
   }
-  if (!this.statusHistory || this.statusHistory.length === 0) {
-    this.statusHistory = [{
-      status: this.status,
-      timestamp: new Date(),
-      comment: "Order initial status",
-      updatedBy: "system",
-    }];
+
+  // Generate 4-digit Delivery Confirmation PIN if not set
+  if (!this.deliveryOtp) {
+    this.deliveryOtp = Math.floor(1000 + Math.random() * 9000).toString();
   }
+
+  // Keep legacy status field in sync with orderStatus
+  const statusMap = {
+    PLACED: "Placed",
+    ACCEPTED: "Accepted",
+    PREPARING: "Preparing",
+    READY_FOR_PICKUP: "Ready for Pickup",
+    PICKED_UP: "Picked Up",
+    DELIVERED: "Delivered",
+    CANCELLED: "Cancelled",
+    REJECTED: "Rejected",
+  };
+  if (this.orderStatus && statusMap[this.orderStatus]) {
+    this.status = statusMap[this.orderStatus];
+  }
+
+  if (!this.statusHistory || this.statusHistory.length === 0) {
+    this.statusHistory = [
+      {
+        status: this.status,
+        timestamp: new Date(),
+        comment: "Order placed by customer.",
+        updatedBy: "customer",
+      },
+    ];
+  }
+
+  if (!this.deliveryTimeline || this.deliveryTimeline.length === 0) {
+    this.deliveryTimeline = [
+      {
+        status: this.deliveryStatus || "NOT_REQUESTED",
+        timestamp: new Date(),
+        comment: "Delivery not yet requested.",
+        updatedBy: "system",
+      },
+    ];
+  }
+
   next();
 });
 

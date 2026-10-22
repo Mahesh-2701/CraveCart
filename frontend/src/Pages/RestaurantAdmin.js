@@ -120,43 +120,47 @@ export default function RestaurantAdmin() {
       <RestaurantNavbar />
 
       <section className="container py-4 flex-grow-1">
-        {/* Restaurant Profile Overview */}
-        <div className="card shadow-sm border-0 rounded-4 mb-4 bg-white p-4">
-          <div className="row align-items-center g-3">
+        {/* Restaurant Profile Overview Banner */}
+        <div className="card shadow-xs border-0 rounded-4 mb-4 bg-white p-4">
+          <div className="row align-items-center g-4">
             <div className="col-12 col-md-5">
-              <h3 className="fw-bold mb-1">{restaurant.name || "Restaurant"} Kitchen</h3>
+              <span className="badge rounded-pill bg-warning bg-opacity-10 text-dark border border-warning border-opacity-25 px-3 py-1 font-heading small mb-2">
+                <i className="bi bi-shop-window text-warning me-1"></i> Kitchen Operations
+              </span>
+              <h3 className="fw-bold font-heading text-dark mb-1">{restaurant.name || "Restaurant"} Kitchen</h3>
               <p className="text-muted small mb-0">
-                <b>Address:</b> {restaurant.address || "Kitchen location"} <br />
-                <b>Phone:</b> {restaurant.phonenumber} | <b>Email:</b> {restaurant.email}
+                <i className="bi bi-geo-alt text-danger me-1"></i> {restaurant.address || "Kitchen location"} <br />
+                <i className="bi bi-telephone text-primary me-1"></i> {restaurant.phonenumber} &nbsp;|&nbsp; 
+                <i className="bi bi-envelope text-muted me-1"></i> {restaurant.email}
               </p>
             </div>
 
             <div className="col-12 col-md-4 text-center">
               <div className="mb-2">
-                <span className="small text-muted me-2">Store Status:</span>
-                <span className={`badge ${available ? "bg-success" : "bg-danger"} px-3 py-2 rounded-pill`}>
-                  {available ? "OPEN & ACCEPTING" : "CLOSED"}
+                <span className="small text-muted me-2 font-heading">Accepting Orders:</span>
+                <span className={`badge px-3 py-1 rounded-pill font-heading ${available ? "bg-success" : "bg-danger"}`}>
+                  {available ? "OPEN & ACCEPTING" : "OFFLINE / CLOSED"}
                 </span>
               </div>
-              <div className="d-flex justify-content-center gap-2">
+              <div className="d-flex justify-content-center gap-2 mb-2">
                 <button
-                  className="btn btn-sm btn-success rounded-pill px-3"
+                  className="btn btn-sm btn-success rounded-pill px-3 font-heading"
                   onClick={() => toggleAvailability(true)}
                   disabled={available}
                 >
-                  Turn Online
+                  <i className="bi bi-toggle-on me-1"></i> Turn Online
                 </button>
                 <button
-                  className="btn btn-sm btn-danger rounded-pill px-3"
+                  className="btn btn-sm btn-outline-danger rounded-pill px-3 font-heading"
                   onClick={() => toggleAvailability(false)}
                   disabled={!available}
                 >
-                  Turn Offline
+                  <i className="bi bi-toggle-off me-1"></i> Turn Offline
                 </button>
               </div>
-              <div className="mt-2">
-                <Link to="/restaurant/admin/order" className="btn btn-sm btn-outline-primary rounded-pill px-3">
-                  📦 View Incoming Orders
+              <div>
+                <Link to="/restaurant/admin/order" className="btn btn-sm btn-crave-primary rounded-pill px-3 d-inline-flex align-items-center gap-1 font-heading">
+                  <i className="bi bi-fire"></i> View Kitchen KDS Feed
                 </Link>
               </div>
             </div>
@@ -164,65 +168,81 @@ export default function RestaurantAdmin() {
             <div className="col-12 col-md-3 text-center">
               <img
                 src={getImageUrl(restaurant.image, "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400")}
-                className="img-fluid rounded-4 shadow-sm"
+                className="img-fluid rounded-4 shadow-xs object-fit-cover w-100"
                 alt={restaurant.name || "Restaurant banner"}
-                style={{ maxHeight: "120px", objectFit: "cover", width: "100%" }}
+                style={{ maxHeight: "120px" }}
               />
             </div>
           </div>
         </div>
 
         {/* Menu Items Table */}
-        <div className="card shadow-sm border-0 rounded-4 mb-4 bg-white p-4">
+        <div className="card shadow-xs border-0 rounded-4 mb-4 bg-white p-4">
           <div className="d-flex justify-content-between align-items-center mb-3">
-            <h4 className="fw-bold mb-0">Menu Management ({menu.length} items)</h4>
+            <div>
+              <h4 className="fw-bold font-heading text-dark mb-0">Menu Management</h4>
+              <small className="text-muted">{menu.length} active dishes published to customer catalog</small>
+            </div>
           </div>
 
-          <div className="table-responsive">
-            <table className="table table-hover align-middle mb-0">
-              <thead className="table-light">
+          <div className="crave-table-container">
+            <table className="crave-table">
+              <thead>
                 <tr>
                   <th>#</th>
                   <th>Dish</th>
                   <th>Image</th>
                   <th>Category</th>
                   <th>Price</th>
-                  <th>Actions</th>
+                  <th className="text-end">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {menu.length > 0 ? (
                   menu.map((item, index) => (
                     <tr key={item._id || index}>
-                      <td>{index + 1}</td>
-                      <td className="fw-bold">
+                      <td className="text-muted small">{index + 1}</td>
+                      <td className="fw-bold font-heading text-dark">
                         {item.name}
-                        {item.isVeg && <span className="badge bg-success ms-2 small">Veg</span>}
+                        {item.isVeg && (
+                          <span className="badge-veg ms-2" title="Pure Veg">
+                            <span className="veg-dot" />
+                          </span>
+                        )}
                       </td>
                       <td>
                         <img
                           src={getImageUrl(item.image)}
-                          className="img-fluid rounded-3"
-                          style={{ width: "60px", height: "45px", objectFit: "cover" }}
+                          className="img-fluid rounded-3 object-fit-cover shadow-xs"
+                          style={{ width: "54px", height: "42px" }}
                           alt={item.name}
                         />
                       </td>
-                      <td>{item.category || "Main Course"}</td>
-                      <td className="fw-bold text-primary">₹{item.price}</td>
                       <td>
+                        <span className="badge bg-light text-secondary border rounded-pill px-2 py-1 font-heading">
+                          {item.category || "Main Course"}
+                        </span>
+                      </td>
+                      <td className="fw-bold font-heading text-primary">₹{item.price}</td>
+                      <td className="text-end">
                         <button
-                          className="btn btn-sm btn-outline-danger rounded-pill px-3"
+                          className="btn btn-sm btn-outline-danger rounded-circle p-2 d-inline-flex align-items-center justify-content-center"
+                          style={{ width: "32px", height: "32px" }}
+                          title="Delete dish"
                           onClick={() => deletemenu(item._id)}
                         >
-                          Delete
+                          <i className="bi bi-trash3"></i>
                         </button>
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="6" className="text-center py-4 text-muted">
-                      No menu items added yet. Use the form below to add your culinary specials!
+                    <td colSpan="6" className="text-center py-5 text-muted">
+                      <div className="p-3 bg-light rounded-circle d-inline-block mb-2">
+                        <i className="bi bi-egg-fried fs-2 text-muted"></i>
+                      </div>
+                      <p className="mb-0">No dishes on your menu yet. Add your first culinary item below!</p>
                     </td>
                   </tr>
                 )}
@@ -232,14 +252,16 @@ export default function RestaurantAdmin() {
         </div>
 
         {/* Add Food Form */}
-        <div className="card shadow-sm border-0 rounded-4 bg-white p-4">
-          <h4 className="fw-bold mb-3">Add New Menu Dish</h4>
+        <div className="card shadow-xs border-0 rounded-4 bg-white p-4">
+          <h4 className="fw-bold font-heading text-dark mb-1">Publish New Menu Dish</h4>
+          <p className="text-muted small mb-4">Add high-resolution dish details to attract hungry foodies</p>
+
           <form onSubmit={handleAddFood} className="row g-3" ref={formRef}>
             <div className="col-md-4">
-              <label className="form-label small fw-semibold">Dish Name</label>
+              <label className="crave-label">Dish Name</label>
               <input
                 type="text"
-                className="form-control rounded-3"
+                className="crave-input"
                 name="name"
                 value={newFood.name}
                 onChange={handleChange}
@@ -249,10 +271,10 @@ export default function RestaurantAdmin() {
             </div>
 
             <div className="col-md-4">
-              <label className="form-label small fw-semibold">Dish Photo</label>
+              <label className="crave-label">Dish Photo</label>
               <input
                 type="file"
-                className="form-control rounded-3"
+                className="crave-input"
                 name="image"
                 accept="image/*"
                 onChange={handlefileChange}
@@ -261,10 +283,10 @@ export default function RestaurantAdmin() {
             </div>
 
             <div className="col-md-4">
-              <label className="form-label small fw-semibold">Price (₹)</label>
+              <label className="crave-label">Price (₹)</label>
               <input
                 type="number"
-                className="form-control rounded-3"
+                className="crave-input"
                 name="price"
                 value={newFood.price}
                 onChange={handleChange}
@@ -275,21 +297,21 @@ export default function RestaurantAdmin() {
             </div>
 
             <div className="col-md-6">
-              <label className="form-label small fw-semibold">Description</label>
+              <label className="crave-label">Description</label>
               <input
                 type="text"
-                className="form-control rounded-3"
+                className="crave-input"
                 name="description"
                 value={newFood.description}
                 onChange={handleChange}
-                placeholder="Short description of ingredients, spices, or taste"
+                placeholder="Short description of ingredients, spices, or cooking style"
               />
             </div>
 
             <div className="col-md-4">
-              <label className="form-label small fw-semibold">Category</label>
+              <label className="crave-label">Category</label>
               <select
-                className="form-select rounded-3"
+                className="crave-input"
                 name="category"
                 value={newFood.category}
                 onChange={handleChange}
@@ -314,15 +336,15 @@ export default function RestaurantAdmin() {
                   checked={newFood.isVeg}
                   onChange={handleChange}
                 />
-                <label className="form-check-label small fw-semibold" htmlFor="isVegCheck">
-                  Pure Veg 🌱
+                <label className="form-check-label small fw-semibold font-heading" htmlFor="isVegCheck">
+                  Pure Veg
                 </label>
               </div>
             </div>
 
-            <div className="col-12 text-end">
-              <button type="submit" className="btn btn-primary-crave px-4 py-2">
-                + Publish Menu Item
+            <div className="col-12 text-end mt-4">
+              <button type="submit" className="btn btn-crave-primary rounded-pill px-4 py-2 font-heading">
+                <i className="bi bi-plus-lg me-1"></i> Publish Menu Item
               </button>
             </div>
           </form>

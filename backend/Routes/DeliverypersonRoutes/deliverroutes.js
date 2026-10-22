@@ -5,6 +5,15 @@ const { signToken } = require("../../config/auth.config");
 const { authenticate, authorizeRoles } = require("../../middleware/auth.middleware");
 const { startDeliverySimulation, stopDeliverySimulation } = require("../../services/socket.service");
 const { sendStatusUpdate } = require("../../services/email.service");
+const {
+  acceptDeliveryOffer,
+  declineDeliveryOffer,
+  dispatchNextCandidate,
+  processPendingDispatches,
+  markArrivedAtRestaurant,
+  confirmPickup,
+  confirmDeliveryCompletion,
+} = require("../../services/delivery.service");
 
 const deliveryroute = express.Router();
 deliveryroute.use(express.json());
@@ -110,6 +119,12 @@ deliveryroute.patch("/availability/:id", authenticate, async (req, res) => {
       { $set: { isAvailable: Boolean(isAvailable) } },
       { new: true }
     );
+
+    // If driver became available, immediately process any waiting SEARCHING orders
+    if (updated.isAvailable) {
+      processPendingDispatches(req.io).catch(() => {});
+    }
+
     return res.status(200).json({
       message: `Status updated: You are now ${updated.isAvailable ? "Online (Accepting Orders)" : "Offline"}`,
       isAvailable: updated.isAvailable,
@@ -140,48 +155,233 @@ deliveryroute.get("/order/:id", authenticate, async (req, res) => {
 });
 
 /**
- * Delivery Status Transition (e.g. Out for Delivery, Delivered)
+ * Get Active Incoming Delivery Offer for Partner
+ */
+deliveryroute.get("/offers/:partnerId", authenticate, async (req, res) => {
+  const { partnerId } = req.params;
+
+  try {
+    const mongoose = require("mongoose");
+    const partnerObjectId = mongoose.Types.ObjectId.isValid(partnerId)
+      ? new mongoose.Types.ObjectId(partnerId)
+      : partnerId;
+
+    const activeOfferOrder = await orderSchema
+      .findOne({
+        deliveryStatus: "OFFERED",
+        "deliveryOffer.deliveryPartnerId": partnerObjectId,
+        "deliveryOffer.offerState": "PENDING",
+        "deliveryOffer.offerExpiresAt": { $gt: new Date() },
+      })
+      .populate("restaurantId", "name address coordinates")
+      .populate({ path: "menuid", populate: { path: "restaurantid" } });
+
+    if (!activeOfferOrder) {
+      return res.status(200).json({ hasOffer: false, offer: null });
+    }
+
+    const rest = activeOfferOrder.restaurantId || activeOfferOrder.menuid?.restaurantid;
+    const now = new Date();
+    const remainingSeconds = Math.max(
+      0,
+      Math.round((new Date(activeOfferOrder.deliveryOffer.offerExpiresAt).getTime() - now.getTime()) / 1000)
+    );
+
+    const offer = {
+      orderId: activeOfferOrder._id,
+      restaurantName: rest?.name || "Kitchen Partner",
+      restaurantAddress: rest?.address || "Pickup Location",
+      restaurantCoordinates: activeOfferOrder.restaurantCoordinates || rest?.coordinates,
+      customerAddress: activeOfferOrder.address,
+      itemCount: activeOfferOrder.items?.length || 1,
+      totalAmount: activeOfferOrder.totalAmount || activeOfferOrder.price,
+      estimatedPayout: Math.round(45 + (activeOfferOrder.deliveryFee || 50) * 0.7),
+      expiresAt: activeOfferOrder.deliveryOffer.offerExpiresAt,
+      remainingSeconds,
+      expiresInSeconds: remainingSeconds,
+    };
+
+    return res.status(200).json({ hasOffer: true, offer });
+  } catch (err) {
+    return res.status(500).json({ message: "Failed to fetch offers: " + err.message });
+  }
+});
+
+/**
+ * Accept Delivery Offer
+ */
+deliveryroute.post("/offers/:orderId/accept", authenticate, async (req, res) => {
+  const { orderId } = req.params;
+  const partnerId = req.user?.id || req.user?._id || req.body?.deliveryPartnerId;
+
+  try {
+    const result = await acceptDeliveryOffer(orderId, partnerId, req.io);
+    if (!result.success) {
+      const statusCode = result.conflict ? 409 : 400;
+      return res.status(statusCode).json({ message: result.message });
+    }
+
+    return res.status(200).json({
+      message: "Delivery accepted! Proceed to restaurant for pickup.",
+      order: result.order,
+    });
+  } catch (err) {
+    return res.status(500).json({ message: "Failed to accept offer: " + err.message });
+  }
+});
+
+/**
+ * Decline Delivery Offer
+ */
+deliveryroute.post("/offers/:orderId/decline", authenticate, async (req, res) => {
+  const { orderId } = req.params;
+  const partnerId = req.user?.id || req.user?._id || req.body?.deliveryPartnerId;
+  const { reason = "Declined by rider" } = req.body;
+
+  try {
+    const result = await declineDeliveryOffer(orderId, partnerId, reason, req.io);
+    return res.status(200).json(result);
+  } catch (err) {
+    return res.status(500).json({ message: "Failed to decline offer: " + err.message });
+  }
+});
+
+/**
+ * Partner Arrived at Restaurant
+ */
+deliveryroute.post("/order/:orderId/arrived", authenticate, async (req, res) => {
+  const { orderId } = req.params;
+  const partnerId = req.user?.id || req.user?._id || req.body?.deliveryPartnerId;
+
+  try {
+    const result = await markArrivedAtRestaurant(orderId, partnerId, req.io);
+    if (!result.success) return res.status(400).json({ message: result.message });
+    return res.status(200).json({ message: "Arrival recorded. Awaiting food package.", order: result.order });
+  } catch (err) {
+    return res.status(500).json({ message: "Failed to mark arrival: " + err.message });
+  }
+});
+
+/**
+ * Confirm Food Pickup
+ */
+deliveryroute.post("/order/:orderId/pickup", authenticate, async (req, res) => {
+  const { orderId } = req.params;
+  const partnerId = req.user?.id || req.user?._id || req.body?.deliveryPartnerId;
+
+  try {
+    const result = await confirmPickup(orderId, partnerId, req.io);
+    if (!result.success) return res.status(400).json({ message: result.message });
+    return res.status(200).json({ message: "Food picked up! Heading to customer.", order: result.order });
+  } catch (err) {
+    return res.status(500).json({ message: "Failed to confirm pickup: " + err.message });
+  }
+});
+
+/**
+ * Confirm Delivery Completion (with optional customer OTP verification)
+ */
+deliveryroute.post("/order/:orderId/complete", authenticate, async (req, res) => {
+  const { orderId } = req.params;
+  const partnerId = req.user?.id || req.user?._id || req.body?.deliveryPartnerId;
+  const { otp } = req.body;
+
+  try {
+    const result = await confirmDeliveryCompletion(orderId, partnerId, otp, req.io);
+    if (!result.success) return res.status(400).json({ message: result.message });
+    return res.status(200).json({ message: "Order delivered successfully! Payout credited.", order: result.order });
+  } catch (err) {
+    return res.status(500).json({ message: "Failed to complete delivery: " + err.message });
+  }
+});
+
+/**
+ * Live GPS Location Broadcast from Delivery Partner
+ */
+deliveryroute.post("/location", authenticate, async (req, res) => {
+  const partnerId = req.user.id;
+  const { lat, lng, speed = 0, heading = 0 } = req.body;
+
+  if (!lat || !lng) {
+    return res.status(400).json({ message: "Latitude and longitude are required." });
+  }
+
+  try {
+    const now = new Date();
+    await deliverySchema.findByIdAndUpdate(partnerId, {
+      $set: {
+        currentLocation: { lat, lng, updatedAt: now },
+      },
+    });
+
+    // Update coordinates on any active deliveries
+    const activeOrder = await orderSchema.findOne({
+      deliverypersonid: partnerId,
+      deliveryStatus: { $in: ["ASSIGNED", "ARRIVED_AT_RESTAURANT", "PICKED_UP", "OUT_FOR_DELIVERY"] },
+    });
+
+    if (activeOrder) {
+      activeOrder.deliveryLocation = { lat, lng, heading, speed, updatedAt: now };
+      await activeOrder.save();
+
+      if (req.io) {
+        req.io.to(`order_${activeOrder._id}`).emit("tracking:update", {
+          orderId: activeOrder._id,
+          lat,
+          lng,
+          speed,
+          heading,
+          isSimulated: false,
+          updatedAt: now,
+        });
+      }
+    } else {
+      // Driver is moving and has capacity; check if any orders are waiting for a rider
+      processPendingDispatches(req.io).catch(() => {});
+    }
+
+    return res.status(200).json({ success: true, message: "Location updated" });
+  } catch (err) {
+    return res.status(500).json({ message: "Failed to update location: " + err.message });
+  }
+});
+
+/**
+ * Manual/Authorized Dispatch Trigger & Retry for Order
+ * Allows admin, restaurant, or delivery services to re-evaluate candidate discovery
+ */
+deliveryroute.post("/dispatch/:orderId", authenticate, async (req, res) => {
+  const { orderId } = req.params;
+
+  try {
+    const result = await dispatchNextCandidate(orderId, req.io);
+    return res.status(200).json(result);
+  } catch (err) {
+    return res.status(500).json({ message: "Dispatch trigger failed: " + err.message });
+  }
+});
+
+/**
+ * Legacy Status Endpoint (Mapped safely to new lifecycle)
  */
 deliveryroute.patch("/order/status/:orderId", authenticate, async (req, res) => {
   const { orderId } = req.params;
-  const { status } = req.body;
+  const { status, otp } = req.body;
+  const partnerId = req.user.id;
 
-  try {
-    const updatedOrder = await orderSchema
-      .findByIdAndUpdate(
-        orderId,
-        {
-          $set: { status },
-          $push: {
-            statusHistory: {
-              status,
-              timestamp: new Date(),
-              comment: `Status updated to ${status} by delivery partner.`,
-              updatedBy: "delivery_partner",
-            },
-          },
-        },
-        { new: true }
-      )
-      .populate("userid", "-password")
-      .populate("deliverypersonid")
-      .populate({ path: "menuid", populate: { path: "restaurantid" } });
-
-    if (!updatedOrder) {
-      return res.status(404).json({ message: "Order not found." });
-    }
-
-    if (req.io) {
-      req.io.to(`user_${updatedOrder.userid._id}`).emit("orderStatusChanged", updatedOrder);
-      req.io.to(`order_${orderId}`).emit("status:update", { orderId, status });
-    }
-
-    sendStatusUpdate(updatedOrder, updatedOrder.userid, status);
-
-    return res.status(200).json({ message: "Order status updated successfully", order: updatedOrder });
-  } catch (err) {
-    return res.status(500).json({ message: "Failed to update status: " + err.message });
+  if (status === "Out for Delivery" || status === "Picked Up") {
+    const resPick = await confirmPickup(orderId, partnerId, req.io);
+    if (!resPick.success) return res.status(400).json({ message: resPick.message });
+    return res.status(200).json({ message: "Status updated to Out for Delivery", order: resPick.order });
   }
+
+  if (status === "Delivered") {
+    const resDel = await confirmDeliveryCompletion(orderId, partnerId, otp, req.io);
+    if (!resDel.success) return res.status(400).json({ message: resDel.message });
+    return res.status(200).json({ message: "Status updated to Delivered", order: resDel.order });
+  }
+
+  return res.status(400).json({ message: "Invalid status transition request for delivery partner." });
 });
 
 /**
