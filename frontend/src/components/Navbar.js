@@ -119,6 +119,37 @@ const Navbar = () => {
                   Restaurants
                 </Link>
               </li>
+              <li className="nav-item dropdown">
+                <a
+                  className="nav-link dropdown-toggle fw-semibold px-3 text-secondary"
+                  href="#portals"
+                  role="button"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                >
+                  Portals
+                </a>
+                <ul className="dropdown-menu shadow-sm border-0 rounded-3">
+                  <li>
+                    <Link className="dropdown-item" to="/restaurant/login">
+                      🍽️ Restaurant Partner
+                    </Link>
+                  </li>
+                  <li>
+                    <Link className="dropdown-item" to="/delivery/login">
+                      🚴 Delivery Partner
+                    </Link>
+                  </li>
+                  <li>
+                    <hr className="dropdown-divider" />
+                  </li>
+                  <li>
+                    <Link className="dropdown-item" to="/admin">
+                      👑 Admin Portal
+                    </Link>
+                  </li>
+                </ul>
+              </li>
             </ul>
 
             {/* Right Side User Profile & Actions */}

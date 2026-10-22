@@ -7,6 +7,7 @@ const cartSchema = require("../../Models/CartSchema");
 const deliverySchema = require("../../Models/Deliveryperson");
 const orderSchema = require("../../Models/OrderSchema");
 const couponModel = require("../../Models/CouponSchema");
+const adminSchema = require("../../Models/Admin");
 const { signToken } = require("../../config/auth.config");
 const { authenticate, enforceOwnership } = require("../../middleware/auth.middleware");
 const { sendOrderConfirmation } = require("../../services/email.service");
@@ -83,6 +84,25 @@ userrouter.post("/login", async (req, res) => {
         return res.status(400).json({ message: "Invalid Password" });
       }
     } else {
+      // Check if user is trying to log in with an Admin, Restaurant, or Delivery account
+      const isAdmin = await adminSchema.findOne({ email: enteredemail });
+      if (isAdmin) {
+        return res.status(400).json({
+          message: "This is an Admin account. Please log in at http://localhost:3000/admin",
+        });
+      }
+      const isRest = await restSchema.findOne({ email: enteredemail });
+      if (isRest) {
+        return res.status(400).json({
+          message: "This is a Restaurant partner account. Please log in at http://localhost:3000/restaurant/login",
+        });
+      }
+      const isDelivery = await deliverySchema.findOne({ email: enteredemail });
+      if (isDelivery) {
+        return res.status(400).json({
+          message: "This is a Delivery partner account. Please log in at http://localhost:3000/delivery/login",
+        });
+      }
       return res.status(400).json({ message: "Invalid Email Credentials" });
     }
   } catch (err) {

@@ -76,6 +76,23 @@ export default function UserLogin() {
               Don't have an account? Sign Up
             </Link>
           </div>
+
+          <hr className="my-3 text-muted" />
+
+          <div className="text-center">
+            <div className="text-muted small mb-2 fw-semibold">Looking for Partner or Admin Portals?</div>
+            <div className="d-flex justify-content-center gap-2 flex-wrap">
+              <Link to="/restaurant/login" className="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1" style={{ fontSize: "12px" }}>
+                🍽️ Restaurant
+              </Link>
+              <Link to="/delivery/login" className="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1" style={{ fontSize: "12px" }}>
+                🚴 Delivery
+              </Link>
+              <Link to="/admin" className="btn btn-sm btn-outline-danger rounded-pill px-2 py-1" style={{ fontSize: "12px" }}>
+                👑 Admin
+              </Link>
+            </div>
+          </div>
         </form>
 
         <ToastContainer position="top-right" autoClose={3000} />

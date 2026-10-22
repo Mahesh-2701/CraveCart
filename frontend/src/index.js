@@ -34,7 +34,9 @@ root.render(
     <Routes>
       {/* Public Customer Routes */}
       <Route exact path="/" element={<App />} />
+      <Route exact path="/login" element={<LoginPage />} />
       <Route exact path="/user/login" element={<LoginPage />} />
+      <Route exact path="/signup" element={<SigninPage />} />
       <Route exact path="/user/signup" element={<SigninPage />} />
       <Route exact path="/restaurants" element={<Restaraunts />} />
       <Route exact path="/foods" element={<Foods />} />
@@ -49,6 +51,7 @@ root.render(
       </Route>
 
       {/* Restaurant Partner Routes */}
+      <Route exact path="/restaurant/login" element={<RestaurantsView />} />
       <Route exact path="/restaurant/view" element={<RestaurantsView />} />
       <Route exact path="/restaurant/logout" element={<RestaurantLogout />} />
       <Route element={<ProtectedrouteRestaurant />}>
@@ -57,6 +60,7 @@ root.render(
       </Route>
 
       {/* Delivery Partner Routes */}
+      <Route exact path="/delivery/login" element={<DeliveryPerson />} />
       <Route exact path="/delivery" element={<DeliveryPerson />} />
       <Route exact path="/delivery/logout" element={<DeliveryLogout />} />
       <Route element={<ProtectedrouteDelivery />}>
@@ -65,6 +69,7 @@ root.render(
       </Route>
 
       {/* Administration Routes */}
+      <Route exact path="/admin" element={<AdminLogin />} />
       <Route exact path="/admin/login" element={<AdminLogin />} />
       <Route element={<ProtectedRouteAdmin />}>
         <Route exact path="/admin/dashboard" element={<AdminDashboard />} />
