@@ -85,7 +85,8 @@ export default function RestaurantOrder() {
                     <th className="py-3">Update Status</th>
                     <th className="py-3">Payment</th>
                     <th className="py-3">Delivery Partner</th>
-                    <th className="py-3 pe-3">Date</th>
+                    <th className="py-3">Date</th>
+                    <th className="py-3 pe-3">Live Map</th>
                   </tr>
                 </thead>
                 <tbody>

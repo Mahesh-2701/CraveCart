@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import api, { getImageUrl } from "../config/api";
 import { toast, ToastContainer } from "react-toastify";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -425,6 +425,7 @@ export default function AdminDashboard() {
                         <th>Status</th>
                         <th>Delivery Partner</th>
                         <th>Address</th>
+                        <th>Live Map</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -441,6 +442,15 @@ export default function AdminDashboard() {
                           </td>
                           <td>{o.deliverypersonid?.name || "Unassigned"}</td>
                           <td className="small text-truncate" style={{ maxWidth: "200px" }}>{o.address}</td>
+                          <td>
+                            <Link
+                              to={`/orders/track/${o._id}`}
+                              className="btn btn-sm btn-outline-primary rounded-pill px-2 py-1"
+                              style={{ fontSize: "12px" }}
+                            >
+                              🗺️ Track
+                            </Link>
+                          </td>
                         </tr>
                       ))}
                     </tbody>

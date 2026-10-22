@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import api, { getImageUrl } from "../config/api";
 import { toast } from "react-toastify";
 
@@ -76,7 +77,16 @@ export default function RestaurantOrderCard({ index, order }) {
         </span>
       </td>
       <td>{order.deliverypersonid?.name || "Assigning..."}</td>
-      <td className="pe-3 text-muted small">{new Date(order.createdAt).toLocaleTimeString()}</td>
+      <td className="text-muted small">{new Date(order.createdAt).toLocaleTimeString()}</td>
+      <td className="pe-3">
+        <Link
+          to={`/orders/track/${order._id}`}
+          className="btn btn-sm btn-outline-primary rounded-pill px-2 py-1"
+          style={{ fontSize: "12px" }}
+        >
+          🗺️ Map View
+        </Link>
+      </td>
     </tr>
   );
 }

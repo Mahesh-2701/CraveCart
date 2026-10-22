@@ -14,8 +14,33 @@ export const WS_URL =
     ? "http://localhost:5000"
     : "https://cravecart-5vz7.onrender.com");
 
-export const MAP_STYLE =
-  process.env.REACT_APP_MAP_STYLE || "https://demotiles.maplibre.org/style.json";
+// High-resolution OpenStreetMap & CartoDB Voyager map style for MapLibre GL
+export const MAP_STYLE = {
+  version: 8,
+  sources: {
+    "osm-voyager": {
+      type: "raster",
+      tiles: [
+        "https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png",
+        "https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png",
+        "https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png",
+        "https://d.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png",
+      ],
+      tileSize: 256,
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    },
+  },
+  layers: [
+    {
+      id: "osm-voyager-layer",
+      type: "raster",
+      source: "osm-voyager",
+      minzoom: 0,
+      maxzoom: 20,
+    },
+  ],
+};
 
 // Centralized Axios instance
 export const api = axios.create({
